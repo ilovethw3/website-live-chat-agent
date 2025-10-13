@@ -1,0 +1,770 @@
+openapi: 3.0.3
+info:
+  title: Website Live Chat Agent API
+  version: 0.1.0
+  description: |
+    基于 LangGraph + Milvus + DeepSeek 的智能客服 Agent API。
+    
+    **核心特性**:
+    - ✅ OpenAI Chat Completion API 完全兼容
+    - ✅ RAG 知识库检索（从 Milvus 检索网站内容）
+    - ✅ 流式响应支持（SSE）
+    - ✅ 会话状态持久化（LangGraph Checkpointer）
+    
+    **WordPress 集成**:
+    WordPress 插件只需修改 Base URL 为 `http://your-server:8000/v1` 即可使用。
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: 本地开发环境
+  - url: http://{host}:8000
+    description: 自定义部署
+    variables:
+      host:
+        default: your-server
+        description: 服务器地址
+
+tags:
+  - name: Chat
+    description: 对话接口（OpenAI 兼容）
+  - name: Knowledge
+    description: 知识库管理
+  - name: Sessions
+    description: 会话管理
+  - name: Health
+    description: 健康检查
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  # ==================== OpenAI 兼容端点 ====================
+  /v1/chat/completions:
+    post:
+      summary: 创建对话完成（OpenAI 兼容）
+      description: |
+        完全兼容 OpenAI Chat Completion API 格式。
+        
+        **内部流程**:
+        1. LangGraph Router 判断是否需要检索知识库
+        2. 如需检索，从 Milvus 检索 Top-3 相关文档
+        3. 调用 DeepSeek LLM 生成响应
+        4. 返回 OpenAI 格式的响应
+        
+        **支持流式响应**: 设置 `stream: true` 启用 SSE
+      operationId: chatCompletions
+      tags:
+        - Chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+            examples:
+              simple_question:
+                summary: 简单问答
+                value:
+                  model: deepseek-chat
+                  messages:
+                    - role: user
+                      content: 你们的退货政策是什么？
+                  stream: false
+              
+              multi_turn:
+                summary: 多轮对话
+                value:
+                  model: deepseek-chat
+                  messages:
+                    - role: user
+                      content: iPhone 15 有哪些颜色？
+                    - role: assistant
+                      content: iPhone 15 提供5种颜色：黑色、白色、蓝色、粉色、黄色。
+                    - role: user
+                      content: 那价格呢？
+                  stream: false
+              
+              streaming:
+                summary: 流式响应
+                value:
+                  model: deepseek-chat
+                  messages:
+                    - role: user
+                      content: 介绍一下你们的产品
+                  stream: true
+                  temperature: 0.7
+
+      responses:
+        '200':
+          description: 成功响应
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionResponse'
+              example:
+                id: chatcmpl-abc123
+                object: chat.completion
+                created: 1699999999
+                model: deepseek-chat
+                choices:
+                  - index: 0
+                    message:
+                      role: assistant
+                      content: 我们的退货政策：收到商品后30天内可申请退货...
+                    finish_reason: stop
+                usage:
+                  prompt_tokens: 15
+                  completion_tokens: 50
+                  total_tokens: 65
+            
+            text/event-stream:
+              schema:
+                type: string
+                description: SSE 流式响应（stream=true 时）
+              example: |
+                data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","created":1699999999,"model":"deepseek-chat","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+                
+                data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","created":1699999999,"model":"deepseek-chat","choices":[{"index":0,"delta":{"content":"我"},"finish_reason":null}]}
+                
+                data: {"id":"chatcmpl-abc123","object":"chat.completion.chunk","created":1699999999,"model":"deepseek-chat","choices":[{"index":0,"delta":{"content":"们"},"finish_reason":null}]}
+                
+                data: [DONE]
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== 知识库管理 ====================
+  /api/v1/knowledge/upsert:
+    post:
+      summary: 批量上传知识库文档
+      description: |
+        上传文档到 Milvus 知识库，自动处理：
+        1. 文档切片（Chunk Size: 500 tokens，Overlap: 50 tokens）
+        2. 生成 Embedding（使用 DeepSeek Embedding 或 OpenAI）
+        3. 存入 Milvus `knowledge_base` Collection
+      operationId: upsertKnowledge
+      tags:
+        - Knowledge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnowledgeUpsertRequest'
+            example:
+              documents:
+                - text: 我们的退货政策：收到商品后30天内可申请退货，需保留原始包装和发票。
+                  metadata:
+                    title: 退货政策
+                    url: https://example.com/return-policy
+                    category: 政策
+                - text: iPhone 15 128GB 售价 ¥5999，256GB 售价 ¥6999，512GB 售价 ¥8499。
+                  metadata:
+                    title: iPhone 15 价格
+                    url: https://example.com/products/iphone-15
+                    category: 产品
+              collection_name: knowledge_base
+              chunk_size: 500
+              chunk_overlap: 50
+
+      responses:
+        '200':
+          description: 上传成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeUpsertResponse'
+              example:
+                success: true
+                inserted_count: 2
+                collection_name: knowledge_base
+                message: 成功上传 2 个文档，共生成 5 个向量切片
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/knowledge/search:
+    get:
+      summary: 测试知识库检索
+      description: |
+        用于调试和验证知识库检索功能。
+        **注意**: 此端点仅用于测试，生产环境应使用 `/v1/chat/completions`。
+      operationId: searchKnowledge
+      tags:
+        - Knowledge
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: 搜索查询
+          example: 退货政策
+        
+        - name: top_k
+          in: query
+          schema:
+            type: integer
+            default: 3
+            minimum: 1
+            maximum: 10
+          description: 返回结果数量
+        
+        - name: collection_name
+          in: query
+          schema:
+            type: string
+            default: knowledge_base
+          description: Collection 名称
+
+      responses:
+        '200':
+          description: 检索成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnowledgeSearchResponse'
+              example:
+                results:
+                  - text: 我们的退货政策：收到商品后30天内可申请退货...
+                    score: 0.92
+                    metadata:
+                      title: 退货政策
+                      url: https://example.com/return-policy
+                      category: 政策
+                  - text: 退货条件：商品未使用且包装完好，保留原始发票...
+                    score: 0.85
+                    metadata:
+                      title: 退货条件说明
+                      url: https://example.com/return-conditions
+                      category: 政策
+                query: 退货政策
+                total_results: 2
+
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== 会话管理 ====================
+  /api/v1/sessions:
+    post:
+      summary: 创建新会话
+      description: |
+        创建一个新的对话会话。
+        **可选功能**: 如果 WordPress 插件不提供 session_id，可使用此端点创建。
+      operationId: createSession
+      tags:
+        - Sessions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionCreateRequest'
+            example:
+              user_id: wordpress-user-123
+              metadata:
+                source: wordpress
+                plugin_version: 3.0.1
+
+      responses:
+        '201':
+          description: 会话创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionCreateResponse'
+              example:
+                session_id: 550e8400-e29b-41d4-a716-446655440000
+                created_at: '2025-10-13T19:52:27+08:00'
+
+  /api/v1/sessions/{session_id}:
+    get:
+      summary: 获取会话详情
+      operationId: getSession
+      tags:
+        - Sessions
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+
+      responses:
+        '200':
+          description: 会话详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              example:
+                session_id: 550e8400-e29b-41d4-a716-446655440000
+                user_id: wordpress-user-123
+                messages:
+                  - role: user
+                    content: iPhone 15 有哪些颜色？
+                    timestamp: '2025-10-13T19:50:00+08:00'
+                  - role: assistant
+                    content: iPhone 15 提供5种颜色：黑色、白色、蓝色、粉色、黄色。
+                    timestamp: '2025-10-13T19:50:02+08:00'
+                created_at: '2025-10-13T19:50:00+08:00'
+                updated_at: '2025-10-13T19:50:02+08:00'
+                metadata:
+                  source: wordpress
+
+        '404':
+          description: 会话不存在
+
+  /api/v1/sessions/{session_id}/state:
+    get:
+      summary: 获取 LangGraph 状态（调试用）
+      description: |
+        返回 LangGraph Agent 的完整状态，包括：
+        - 对话历史
+        - 检索到的文档
+        - 工具调用记录
+        - Checkpoint ID
+      operationId: getSessionState
+      tags:
+        - Sessions
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+
+      responses:
+        '200':
+          description: LangGraph 状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionStateResponse'
+              example:
+                session_id: 550e8400-e29b-41d4-a716-446655440000
+                state:
+                  messages:
+                    - type: HumanMessage
+                      content: iPhone 15 有哪些颜色？
+                    - type: AIMessage
+                      content: iPhone 15 提供5种颜色...
+                  retrieved_docs:
+                    - '[文档1] iPhone 15 颜色：黑色、白色...'
+                  tool_calls:
+                    - node: router
+                      decision: retrieve
+                checkpoint_id: checkpoint-abc123
+
+  # ==================== 健康检查 ====================
+  /api/v1/health:
+    get:
+      summary: 健康检查
+      description: |
+        检查服务健康状态，包括：
+        - Milvus 连接状态
+        - Redis 连接状态
+        - LLM API 可用性（可选）
+      operationId: healthCheck
+      tags:
+        - Health
+      security: []  # 健康检查不需要认证
+
+      responses:
+        '200':
+          description: 服务健康
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+              example:
+                status: healthy
+                services:
+                  milvus:
+                    status: healthy
+                    host: 192.168.1.100
+                    collections:
+                      - knowledge_base
+                      - conversation_history
+                  redis:
+                    status: healthy
+                    host: localhost
+                    port: 6379
+                timestamp: 1699999999
+
+        '503':
+          description: 服务不健康
+          content:
+            application/json:
+              example:
+                status: unhealthy
+                services:
+                  milvus:
+                    status: unhealthy
+                    message: Connection timeout
+                  redis:
+                    status: healthy
+                timestamp: 1699999999
+
+# ==================== 组件定义 ====================
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: |
+        API Key 认证，格式: `Bearer your-api-key`
+        
+        示例: `Authorization: Bearer sk-agent-12345abcde`
+
+  schemas:
+    # ===== OpenAI 兼容模型 =====
+    ChatMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [system, user, assistant]
+          description: 消息角色
+        content:
+          type: string
+          description: 消息内容
+
+    ChatCompletionRequest:
+      type: object
+      required:
+        - model
+        - messages
+      properties:
+        model:
+          type: string
+          default: deepseek-chat
+          description: 模型名称（兼容性参数，实际使用配置中的 LLM）
+          example: deepseek-chat
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+          description: 对话历史
+        stream:
+          type: boolean
+          default: false
+          description: 是否启用流式响应（SSE）
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+          default: 0.7
+          description: 温度参数（控制随机性）
+        max_tokens:
+          type: integer
+          minimum: 1
+          description: 最大生成 Token 数（可选）
+        top_p:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 1.0
+          description: 核采样参数
+
+    ChatCompletionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 响应ID
+          example: chatcmpl-abc123
+        object:
+          type: string
+          enum: [chat.completion]
+        created:
+          type: integer
+          description: Unix 时间戳
+          example: 1699999999
+        model:
+          type: string
+          example: deepseek-chat
+        choices:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatCompletionChoice'
+        usage:
+          $ref: '#/components/schemas/ChatCompletionUsage'
+
+    ChatCompletionChoice:
+      type: object
+      properties:
+        index:
+          type: integer
+        message:
+          $ref: '#/components/schemas/ChatMessage'
+        finish_reason:
+          type: string
+          enum: [stop, length, tool_calls]
+          nullable: true
+
+    ChatCompletionUsage:
+      type: object
+      properties:
+        prompt_tokens:
+          type: integer
+        completion_tokens:
+          type: integer
+        total_tokens:
+          type: integer
+
+    # ===== 知识库模型 =====
+    DocumentChunk:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          description: 文档文本内容
+          maxLength: 10000
+        metadata:
+          type: object
+          description: 文档元数据
+          properties:
+            title:
+              type: string
+            url:
+              type: string
+              format: uri
+            category:
+              type: string
+              enum: [FAQ, 产品, 政策, 其他]
+            language:
+              type: string
+              default: zh
+          additionalProperties: true
+
+    KnowledgeUpsertRequest:
+      type: object
+      required:
+        - documents
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentChunk'
+          minItems: 1
+          maxItems: 100
+        collection_name:
+          type: string
+          default: knowledge_base
+        chunk_size:
+          type: integer
+          default: 500
+          minimum: 100
+          maximum: 2000
+        chunk_overlap:
+          type: integer
+          default: 50
+          minimum: 0
+          maximum: 500
+
+    KnowledgeUpsertResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        inserted_count:
+          type: integer
+        collection_name:
+          type: string
+        message:
+          type: string
+
+    SearchResult:
+      type: object
+      properties:
+        text:
+          type: string
+        score:
+          type: number
+          format: float
+          description: 相似度分数（0-1）
+        metadata:
+          type: object
+
+    KnowledgeSearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        query:
+          type: string
+        total_results:
+          type: integer
+
+    # ===== 会话模型 =====
+    SessionMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    Session:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          nullable: true
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionMessage'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+
+    SessionCreateRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+
+    SessionCreateResponse:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    SessionStateResponse:
+      type: object
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        state:
+          type: object
+          description: AgentState 序列化
+        checkpoint_id:
+          type: string
+          nullable: true
+
+    # ===== 健康检查 =====
+    ServiceStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        host:
+          type: string
+        message:
+          type: string
+          nullable: true
+
+    HealthCheckResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        services:
+          type: object
+          properties:
+            milvus:
+              $ref: '#/components/schemas/ServiceStatus'
+            redis:
+              $ref: '#/components/schemas/ServiceStatus'
+        timestamp:
+          type: integer
+
+    # ===== 错误响应 =====
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            code:
+              type: string
+
+  responses:
+    Unauthorized:
+      description: API Key 无效或缺失
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              message: Invalid API key
+              type: invalid_request_error
+              code: invalid_api_key
+
+    ValidationError:
+      description: 请求参数验证失败
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              message: 'Validation error: messages is required'
+              type: invalid_request_error
+              code: validation_error
+
+    InternalError:
+      description: 服务器内部错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error:
+              message: Internal server error
+              type: server_error
+              code: internal_error
+
