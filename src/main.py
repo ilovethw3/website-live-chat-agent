@@ -111,6 +111,7 @@ async def app_exception_handler(request, exc: AppException) -> JSONResponse:
 # 注册路由
 # ruff: noqa: E402 - 导入必须在app创建后，避免循环依赖
 from src.api.v1 import knowledge, openai_compat
+from src.services.milvus_service import milvus_service
 
 app.include_router(openai_compat.router, prefix="/v1", tags=["Chat"])
 app.include_router(knowledge.router, prefix="/api/v1", tags=["Knowledge"])
@@ -120,8 +121,6 @@ app.include_router(knowledge.router, prefix="/api/v1", tags=["Knowledge"])
 @app.get("/api/v1/health", tags=["Health"])
 async def health_check() -> dict:
     """健康检查"""
-    from src.services.milvus_service import milvus_service
-
     milvus_healthy = milvus_service.health_check()
 
     return {

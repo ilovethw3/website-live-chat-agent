@@ -36,8 +36,8 @@ def test_chat_completions_invalid_api_key(test_client):
 
 def test_chat_completions_simple(test_client, api_headers, mock_llm, mock_milvus_service):
     """测试简单对话"""
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
-        with patch("src.agent.nodes.milvus_service", mock_milvus_service):
+    with patch("src.services.llm_factory.create_llm", return_value=mock_llm):
+        with patch("src.agent.tools.milvus_service", mock_milvus_service):
             response = test_client.post(
                 "/v1/chat/completions",
                 headers=api_headers,
@@ -65,8 +65,8 @@ def test_chat_completions_with_multiple_messages(
     test_client, api_headers, mock_llm, mock_milvus_service
 ):
     """测试多轮对话"""
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
-        with patch("src.agent.nodes.milvus_service", mock_milvus_service):
+    with patch("src.services.llm_factory.create_llm", return_value=mock_llm):
+        with patch("src.agent.tools.milvus_service", mock_milvus_service):
             response = test_client.post(
                 "/v1/chat/completions",
                 headers=api_headers,
@@ -90,8 +90,8 @@ def test_chat_completions_streaming(
     test_client, api_headers, mock_llm, mock_milvus_service
 ):
     """测试流式响应"""
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
-        with patch("src.agent.nodes.milvus_service", mock_milvus_service):
+    with patch("src.services.llm_factory.create_llm", return_value=mock_llm):
+        with patch("src.agent.tools.milvus_service", mock_milvus_service):
             response = test_client.post(
                 "/v1/chat/completions",
                 headers=api_headers,
@@ -142,8 +142,8 @@ def test_chat_completions_with_temperature(
     test_client, api_headers, mock_llm, mock_milvus_service
 ):
     """测试自定义 temperature 参数"""
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
-        with patch("src.agent.nodes.milvus_service", mock_milvus_service):
+    with patch("src.services.llm_factory.create_llm", return_value=mock_llm):
+        with patch("src.agent.tools.milvus_service", mock_milvus_service):
             response = test_client.post(
                 "/v1/chat/completions",
                 headers=api_headers,
@@ -162,8 +162,8 @@ def test_chat_completions_with_max_tokens(
     test_client, api_headers, mock_llm, mock_milvus_service
 ):
     """测试 max_tokens 参数"""
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
-        with patch("src.agent.nodes.milvus_service", mock_milvus_service):
+    with patch("src.services.llm_factory.create_llm", return_value=mock_llm):
+        with patch("src.agent.tools.milvus_service", mock_milvus_service):
             response = test_client.post(
                 "/v1/chat/completions",
                 headers=api_headers,
@@ -182,8 +182,8 @@ def test_chat_completions_usage_info(
     test_client, api_headers, mock_llm, mock_milvus_service
 ):
     """测试返回的 token 使用信息"""
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
-        with patch("src.agent.nodes.milvus_service", mock_milvus_service):
+    with patch("src.services.llm_factory.create_llm", return_value=mock_llm):
+        with patch("src.agent.tools.milvus_service", mock_milvus_service):
             response = test_client.post(
                 "/v1/chat/completions",
                 headers=api_headers,

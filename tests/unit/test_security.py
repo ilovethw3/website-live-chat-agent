@@ -29,7 +29,7 @@ async def test_verify_api_key_invalid():
     with pytest.raises(HTTPException) as exc_info:
         await verify_api_key(authorization)
 
-    assert exc_info.value.status_code == 401
+    assert exc_info.value.status_code == 403
     assert "Invalid API key" in str(exc_info.value.detail)
 
 
@@ -41,7 +41,7 @@ async def test_verify_api_key_empty():
     with pytest.raises(HTTPException) as exc_info:
         await verify_api_key(authorization)
 
-    assert exc_info.value.status_code == 401
+    assert exc_info.value.status_code == 403
 
 
 @pytest.mark.asyncio
@@ -52,7 +52,7 @@ async def test_verify_api_key_missing_bearer():
     with pytest.raises(HTTPException) as exc_info:
         await verify_api_key(authorization)
 
-    assert exc_info.value.status_code == 401
+    assert exc_info.value.status_code == 403
     assert "authorization header format" in str(exc_info.value.detail).lower()
 
 
@@ -64,7 +64,7 @@ async def test_verify_api_key_wrong_format():
     with pytest.raises(HTTPException) as exc_info:
         await verify_api_key(authorization)
 
-    assert exc_info.value.status_code == 401
+    assert exc_info.value.status_code == 403
 
 
 @pytest.mark.asyncio
