@@ -114,7 +114,7 @@ chmod +x scripts/run_tests.sh
 | `src/agent/*` | 80%+ |
 | `src/api/*` | 90%+ |
 
-📚 **详细测试文档**: [docs/TESTING.md](docs/TESTING.md)
+📚 **详细测试文档**: [docs/qa/testing.md](docs/qa/testing.md)
 
 ---
 

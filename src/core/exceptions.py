@@ -21,7 +21,14 @@ class ConfigurationError(AppException):
         super().__init__(message, code="configuration_error")
 
 
-class MilvusConnectionError(AppException):
+class MilvusError(AppException):
+    """Milvus 相关错误基类"""
+
+    def __init__(self, message: str, code: str = "milvus_error") -> None:
+        super().__init__(message, code=code)
+
+
+class MilvusConnectionError(MilvusError):
     """Milvus 连接错误"""
 
     def __init__(self, message: str) -> None:

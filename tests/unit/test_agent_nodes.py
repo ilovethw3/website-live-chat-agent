@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
-from src.agent.nodes import call_llm, retrieve_knowledge, call_tool
+from src.agent.nodes import router_node, retrieve_node, call_llm_node
 from src.agent.state import AgentState
 
 
@@ -22,8 +22,8 @@ async def test_call_llm_simple(mock_llm):
         "session_id": "test-123",
     }
 
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
-        result = await call_llm(state)
+    with patch("src.agent.nodes.create_llm", return_value=mock_llm):
+        result = await call_llm_node(state)
 
         assert "messages" in result
         assert len(result["messages"]) > 0
@@ -50,8 +50,8 @@ async def test_call_llm_with_context(mock_llm):
         "session_id": "test-123",
     }
 
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
-        result = await call_llm(state)
+    with patch("src.agent.nodes.create_llm", return_value=mock_llm):
+        result = await call_llm_node(state)
 
         assert "messages" in result
         # LLM 应该收到包含检索文档的上下文
@@ -77,8 +77,8 @@ async def test_retrieve_knowledge(mock_embeddings):
     ]
 
     with patch("src.agent.nodes.milvus_service", mock_milvus):
-        with patch("src.agent.nodes.get_embeddings", return_value=mock_embeddings):
-            result = await retrieve_knowledge(state)
+        with patch("src.agent.nodes.create_embeddings", return_value=mock_embeddings):
+            result = await retrieve_node(state)
 
             assert "retrieved_docs" in result
             assert len(result["retrieved_docs"]) > 0
@@ -95,51 +95,15 @@ async def test_retrieve_knowledge_empty_query():
         "session_id": "test-123",
     }
 
-    result = await retrieve_knowledge(state)
+    result = await retrieve_node(state)
 
     # 应该返回空的检索结果
     assert result.get("retrieved_docs", []) == []
 
 
 @pytest.mark.asyncio
-async def test_call_tool_with_knowledge_search():
-    """测试工具调用节点 - 知识检索工具"""
-    state: AgentState = {
-        "messages": [
-            HumanMessage(content="查询退货政策"),
-            AIMessage(
-                content="",
-                tool_calls=[
-                    {
-                        "id": "call_123",
-                        "name": "knowledge_search",
-                        "args": {"query": "退货政策"},
-                    }
-                ],
-            ),
-        ],
-        "retrieved_docs": [],
-        "tool_calls": [],
-        "session_id": "test-123",
-    }
-
-    mock_milvus = AsyncMock()
-    mock_milvus.search_knowledge.return_value = [
-        {"text": "退货政策文档", "score": 0.9, "metadata": {}}
-    ]
-
-    with patch("src.agent.nodes.milvus_service", mock_milvus):
-        result = await call_tool(state)
-
-        assert "messages" in result
-        # 应该添加 ToolMessage
-        tool_messages = [msg for msg in result["messages"] if isinstance(msg, ToolMessage)]
-        assert len(tool_messages) > 0
-
-
-@pytest.mark.asyncio
-async def test_call_tool_no_tool_calls():
-    """测试没有工具调用时的行为"""
+async def test_router_node_greeting():
+    """测试路由节点 - 简单打招呼"""
     state: AgentState = {
         "messages": [HumanMessage(content="你好")],
         "retrieved_docs": [],
@@ -147,8 +111,24 @@ async def test_call_tool_no_tool_calls():
         "session_id": "test-123",
     }
 
-    result = await call_tool(state)
+    result = await router_node(state)
 
-    # 应该返回原状态或空变更
+    # 路由节点应该判断是否需要检索
+    assert "next_step" in result or result == {}
+
+
+@pytest.mark.asyncio
+async def test_router_node_product_query():
+    """测试路由节点 - 产品查询（需要检索）"""
+    state: AgentState = {
+        "messages": [HumanMessage(content="你们的产品有哪些功能？")],
+        "retrieved_docs": [],
+        "tool_calls": [],
+        "session_id": "test-123",
+    }
+
+    result = await router_node(state)
+
+    # 对于产品查询，可能需要检索
     assert result is not None
 

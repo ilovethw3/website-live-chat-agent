@@ -163,7 +163,8 @@ async def call_llm_node(state: AgentState) -> dict[str, Any]:
     # 构建系统提示词
     if retrieved_docs:
         # RAG 模式
-        context = "\n\n".join(retrieved_docs)
+        # retrieved_docs 是字典列表，需要提取 text 字段
+        context = "\n\n".join([doc.get("text", str(doc)) for doc in retrieved_docs])
         system_prompt = f"""你是一个专业的网站客服助手。
 
 **知识库上下文**:
