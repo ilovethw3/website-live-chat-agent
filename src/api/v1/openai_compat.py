@@ -14,6 +14,7 @@ from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage
 
 from src.agent.graph import get_agent_app
+from src.core.config import settings
 from src.core.security import verify_api_key
 from src.models.openai_schema import (
     ChatCompletionChoice,
@@ -24,12 +25,41 @@ from src.models.openai_schema import (
     ChatCompletionResponse,
     ChatCompletionUsage,
     ChatMessage,
+    OpenAIModelList,
+    OpenAIModelRef,
 )
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
 
+
+@router.get("/models")
+async def list_models() -> OpenAIModelList:
+    """OpenAI 兼容的模型列表端点 (/v1/models)。"""
+    now_ts = int(time.time())
+
+    id_to_ref: dict[str, OpenAIModelRef] = {}
+
+    chat_model_id = settings.llm_model_name
+    id_to_ref[chat_model_id] = OpenAIModelRef(
+        id=chat_model_id,
+        created=now_ts,
+        owned_by=f"provider:{settings.llm_provider}",
+    )
+
+    try:
+        embedding_id = settings.embedding_model
+        if embedding_id and embedding_id not in id_to_ref:
+            id_to_ref[embedding_id] = OpenAIModelRef(
+                id=embedding_id,
+                created=now_ts,
+                owned_by=f"provider:{settings.embedding_provider}",
+            )
+    except Exception:
+        pass
+
+    return OpenAIModelList(data=list(id_to_ref.values()))
 
 @router.post("/chat/completions", response_model=None)
 async def chat_completions(

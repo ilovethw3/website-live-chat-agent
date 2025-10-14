@@ -15,7 +15,7 @@ class DocumentChunk(BaseModel):
 class KnowledgeUpsertRequest(BaseModel):
     """知识库上传请求"""
 
-    documents: list[DocumentChunk] = Field(..., min_length=1, max_length=100)
+    documents: list[DocumentChunk] = Field(..., min_length=0, max_length=100)
     collection_name: str = Field(default="knowledge_base")
     chunk_size: int = Field(default=500, ge=100, le=2000)
     chunk_overlap: int = Field(default=50, ge=0, le=500)

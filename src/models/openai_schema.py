@@ -81,3 +81,20 @@ class ChatCompletionChunk(BaseModel):
     model: str
     choices: list[ChatCompletionChunkChoice]
 
+
+# ===== 模型列表（/v1/models） =====
+class OpenAIModelRef(BaseModel):
+    """OpenAI 模型引用对象（兼容 /v1/models 返回项）。"""
+
+    id: str
+    object: Literal["model"] = "model"
+    created: int
+    owned_by: str
+
+
+class OpenAIModelList(BaseModel):
+    """OpenAI 模型列表响应（/v1/models）。"""
+
+    object: Literal["list"] = "list"
+    data: list[OpenAIModelRef]
+
