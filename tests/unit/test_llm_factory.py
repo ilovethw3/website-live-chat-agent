@@ -5,9 +5,11 @@
 """
 
 import os
-import pytest
 from unittest.mock import patch
 
+import pytest
+
+from src.core.exceptions import ConfigurationError
 from src.services.llm_factory import create_llm
 
 
@@ -58,25 +60,53 @@ def test_create_llm_anthropic():
 
 def test_create_llm_missing_deepseek_key():
     """测试缺少 DeepSeek API Key"""
+    # 确保测试时强制重新加载 settings
+    from src.core.config import Settings
+
     with patch.dict(
-        os.environ, {"LLM_PROVIDER": "deepseek", "DEEPSEEK_API_KEY": ""}
+        os.environ,
+        {
+            "LLM_PROVIDER": "deepseek",
+            "DEEPSEEK_API_KEY": "",
+            "API_KEY": "test-key",
+            "MILVUS_HOST": "localhost"
+        },
+        clear=True
     ):
-        with pytest.raises((ValueError, Exception)):
-            create_llm()
+        # 重新创建 settings 实例
+        with patch("src.services.llm_factory.settings", Settings()):
+            with pytest.raises(ConfigurationError, match="DEEPSEEK_API_KEY"):
+                create_llm()
 
 
 def test_create_llm_missing_openai_key():
     """测试缺少 OpenAI API Key"""
-    with patch.dict(os.environ, {"LLM_PROVIDER": "openai", "OPENAI_API_KEY": ""}):
-        with pytest.raises((ValueError, Exception)):
-            create_llm()
+    from src.core.config import Settings
+
+    with patch.dict(
+        os.environ,
+        {
+            "LLM_PROVIDER": "openai",
+            "OPENAI_API_KEY": "",
+            "API_KEY": "test-key",
+            "MILVUS_HOST": "localhost"
+        },
+        clear=True
+    ):
+        with patch("src.services.llm_factory.settings", Settings()):
+            with pytest.raises(ConfigurationError, match="OPENAI_API_KEY"):
+                create_llm()
 
 
 def test_create_llm_invalid_provider():
     """测试无效的 LLM Provider"""
-    with patch.dict(os.environ, {"LLM_PROVIDER": "invalid"}):
-        # 由于 Settings 的 Literal 验证，这应该在 Settings 初始化时就失败
-        with pytest.raises(Exception):
+    # 由于 Settings 使用 Literal 验证，无效的 provider 会在 Settings 初始化时失败
+    # 这里测试 ConfigurationError 的抛出（从 create_llm 的 else 分支）
+
+    # 临时修改 settings 以测试 else 分支
+    with patch("src.services.llm_factory.settings") as mock_settings:
+        mock_settings.llm_provider = "invalid_provider"
+        with pytest.raises(ConfigurationError, match="Unsupported LLM provider"):
             create_llm()
 
 

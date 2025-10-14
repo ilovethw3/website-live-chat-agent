@@ -4,8 +4,7 @@
 测试 /api/v1/knowledge 相关端点。
 """
 
-import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
 
 def test_knowledge_upsert_unauthorized(test_client):

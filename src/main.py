@@ -109,6 +109,7 @@ async def app_exception_handler(request, exc: AppException) -> JSONResponse:
 
 
 # 注册路由
+# ruff: noqa: E402 - 导入必须在app创建后，避免循环依赖
 from src.api.v1 import knowledge, openai_compat
 
 app.include_router(openai_compat.router, prefix="/v1", tags=["Chat"])

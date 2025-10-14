@@ -4,11 +4,12 @@
 测试 LangGraph 节点函数的行为。
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from unittest.mock import patch
 
-from src.agent.nodes import router_node, retrieve_node, call_llm_node
+import pytest
+from langchain_core.messages import AIMessage, HumanMessage
+
+from src.agent.nodes import call_llm_node, retrieve_node, router_node
 from src.agent.state import AgentState
 
 
@@ -67,22 +68,21 @@ async def test_retrieve_knowledge(mock_embeddings):
         "session_id": "test-123",
     }
 
-    mock_milvus = AsyncMock()
-    mock_milvus.search_knowledge.return_value = [
+    # Mock search_knowledge_for_agent function return value
+    mock_results = [
         {
             "text": "30天内可以无条件退货",
             "score": 0.9,
-            "metadata": {"source": "policy.md"},
+            "metadata": {"source": "policy.md", "title": "退货政策"},
         }
     ]
 
-    with patch("src.agent.nodes.milvus_service", mock_milvus):
-        with patch("src.agent.nodes.create_embeddings", return_value=mock_embeddings):
-            result = await retrieve_node(state)
+    with patch("src.agent.nodes.search_knowledge_for_agent", return_value=mock_results):
+        result = await retrieve_node(state)
 
-            assert "retrieved_docs" in result
-            assert len(result["retrieved_docs"]) > 0
-            mock_milvus.search_knowledge.assert_called_once()
+        assert "retrieved_docs" in result
+        assert len(result["retrieved_docs"]) > 0
+        assert result["confidence_score"] == 0.9
 
 
 @pytest.mark.asyncio

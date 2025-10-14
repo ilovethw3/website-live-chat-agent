@@ -5,7 +5,7 @@
 """
 
 
-class AppException(Exception):
+class AppException(Exception):  # noqa: N818 - 保持向后兼容，将在后续PR中重命名为AppError
     """应用基础异常"""
 
     def __init__(self, message: str, code: str | None = None) -> None:

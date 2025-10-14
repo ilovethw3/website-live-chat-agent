@@ -4,7 +4,6 @@ OpenAI 兼容的 Chat Completions API
 提供完全兼容 OpenAI 格式的 /v1/chat/completions 端点。
 """
 
-import json
 import logging
 import time
 import uuid
@@ -12,15 +11,15 @@ from typing import AsyncGenerator
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from src.agent.graph import get_agent_app
 from src.core.security import verify_api_key
 from src.models.openai_schema import (
+    ChatCompletionChoice,
     ChatCompletionChunk,
     ChatCompletionChunkChoice,
     ChatCompletionChunkDelta,
-    ChatCompletionChoice,
     ChatCompletionRequest,
     ChatCompletionResponse,
     ChatCompletionUsage,
@@ -217,7 +216,6 @@ async def _stream_response(
         yield f"data: {first_chunk.model_dump_json()}\n\n"
 
         # 流式执行 Agent
-        full_response = ""
         async for chunk in app.astream(initial_state, config):
             # 检查是否有新的 AI 消息
             if "llm" in chunk:  # LLM 节点的输出
@@ -227,7 +225,7 @@ async def _stream_response(
                     ai_message = messages[-1]
                     if isinstance(ai_message, AIMessage):
                         content = ai_message.content
-                        
+
                         # 发送内容 chunk
                         # 注意：这里发送完整内容，实际应该发送增量
                         # 为了简化，我们一次性发送（LangGraph 不原生支持 token-by-token 流式）
@@ -244,7 +242,6 @@ async def _stream_response(
                             ],
                         )
                         yield f"data: {content_chunk.model_dump_json()}\n\n"
-                        full_response = content
 
         # 发送结束 chunk
         final_chunk = ChatCompletionChunk(

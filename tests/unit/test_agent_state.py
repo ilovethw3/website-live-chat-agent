@@ -4,8 +4,7 @@
 测试 AgentState TypedDict 的结构和类型。
 """
 
-import pytest
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
 from src.agent.state import AgentState
 

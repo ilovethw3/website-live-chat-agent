@@ -4,9 +4,7 @@
 测试 /v1/chat/completions 端点的功能。
 """
 
-import pytest
-import json
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
 
 def test_chat_completions_unauthorized(test_client):

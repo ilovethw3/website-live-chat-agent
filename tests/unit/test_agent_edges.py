@@ -4,10 +4,9 @@
 测试 LangGraph 条件边的路由决策。
 """
 
-import pytest
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
-from src.agent.edges import should_retrieve, should_continue
+from src.agent.edges import should_continue, should_retrieve
 from src.agent.state import AgentState
 
 

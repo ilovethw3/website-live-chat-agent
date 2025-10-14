@@ -4,8 +4,9 @@
 测试 Agent 的端到端执行流程。
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import AsyncMock, patch
 from langchain_core.messages import HumanMessage
 
 from src.agent.graph import get_agent_app
@@ -140,7 +141,7 @@ async def test_agent_graph_state_persistence(mock_llm, mock_milvus_service):
                 "session_id": "test-persist-1",
             }
 
-            result1 = await app.ainvoke(state1, config=config)
+            _ = await app.ainvoke(state1, config=config)
 
             # 第二次调用，使用相同的 thread_id
             state2: AgentState = {

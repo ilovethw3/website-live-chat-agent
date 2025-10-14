@@ -4,7 +4,6 @@
 测试系统状态和基本端点。
 """
 
-import pytest
 from unittest.mock import patch
 
 

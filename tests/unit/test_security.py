@@ -7,8 +7,8 @@
 import pytest
 from fastapi import HTTPException
 
-from src.core.security import verify_api_key
 from src.core.config import settings
+from src.core.security import verify_api_key
 
 
 @pytest.mark.asyncio
