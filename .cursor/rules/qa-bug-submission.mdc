@@ -1,0 +1,191 @@
+---
+description: QA 提交 Bug 到 GitHub Issues 的完整流程和规范
+---
+
+# QA Bug 提交流程
+
+## 概述
+
+QA 角色在发现 Bug 后，应遵循标准化流程将问题提交到 GitHub Issues，而不是在本地维护 Issue 文档。
+
+## 前提条件
+
+1. GitHub CLI (`gh`) 已安装并登录
+   ```bash
+   gh auth status
+   ```
+
+2. 仓库已启用 Issues 功能
+
+3. 已创建必要的标签（bug, enhancement, documentation 等）
+
+## 标准流程
+
+### 第一步：使用模板创建本地 Bug 报告
+
+1. 复制 Bug 模板：
+   ```bash
+   cp docs/qa/ISSUE-BUG-TEMPLATE.md /tmp/bug-report.md
+   ```
+
+2. 填写完整的 Bug 信息（参考模板结构）：
+   - 问题摘要
+   - 影响范围
+   - 详细错误清单（错误信息、期望行为、实际行为）
+   - 复现步骤
+   - 修复方案（至少一个推荐方案）
+   - 验收标准
+   - 相关文件列表
+
+### 第二步：提交到 GitHub Issues
+
+使用 `gh issue create` 命令：
+
+```bash
+gh issue create \
+  --title "[简短描述问题]" \
+  --body-file /tmp/bug-report.md \
+  --label "bug" \
+  --assignee "@me"
+```
+
+**重要参数说明**：
+- `--title`: 简洁明确的标题（中文或英文）
+- `--body-file`: 指向完整 Bug 报告文件
+- `--label`: 使用仓库已有的标签（如 `bug`, `P0-high`, `testing`）
+- `--assignee`: 指定负责人（通常是 LD）
+
+**优先级标签规范**：
+- `P0-high`: 阻塞性问题，影响核心功能
+- `P1-medium`: 重要问题，影响功能完整性
+- `P2-low`: 优化改进，不影响主流程
+- `P3-minor`: 次要问题，可延迟处理
+
+### 第三步：验证 Issue 创建成功
+
+```bash
+gh issue list --limit 5
+```
+
+记录返回的 Issue 编号（如 #1, #2）。
+
+### 第四步：清理临时文件
+
+```bash
+rm /tmp/bug-report.md
+```
+
+**注意**：本地不保存 Bug 文档，所有 Bug 信息集中管理在 GitHub Issues。
+
+## 特殊情况处理
+
+### 标签不存在
+
+如果遇到 `label not found` 错误：
+
+1. 先创建 Issue，仅使用 `bug` 标签：
+   ```bash
+   gh issue create --title "..." --body-file ... --label "bug"
+   ```
+
+2. 在 GitHub Web UI 创建缺失的标签后，手动添加
+
+### Issues 功能未启用
+
+错误信息：`repository has disabled issues`
+
+**解决方案**：
+1. 访问仓库设置：`https://github.com/[owner]/[repo]/settings`
+2. 在 "Features" 部分勾选 "Issues"
+3. 保存后重新提交
+
+### 批量提交多个 Bug
+
+如有多个相关 Bug：
+
+1. 每个 Bug 单独创建一个报告文件
+2. 依次提交到 GitHub
+3. 在 Issue 描述中使用 `Related to #X` 关联
+
+## Bug 模板位置
+
+- **模板文件**：[docs/qa/ISSUE-BUG-TEMPLATE.md](mdc:docs/qa/ISSUE-BUG-TEMPLATE.md)
+- 包含完整的字段说明和示例
+
+## QA 职责边界
+
+### ✅ QA 应该做的
+
+- 执行测试并发现 Bug
+- 填写详细的 Bug 报告
+- 提交 Bug 到 GitHub Issues
+- 验证 Bug 修复后的效果
+- 生成测试报告和覆盖率报告
+
+### ❌ QA 不应该做的
+
+- **修改源代码** (`src/` 目录)
+- **修复 Bug**（这是 LD 的职责）
+- 直接关闭 Issue（需要 LD 修复并验证后才能关闭）
+
+## Git 工作流整合
+
+如果在提交 Bug 的同时有其他文档变更：
+
+```bash
+# 提交 Bug 模板或其他 QA 文档
+git add docs/qa/
+git commit -m "docs(qa): 添加/更新 QA 文档
+
+- 提交 GitHub Issue #X: [Bug 标题]
+- 相关变更说明
+"
+git push origin main
+```
+
+## 常用命令速查
+
+```bash
+# 查看 Issue 列表
+gh issue list
+
+# 查看特定 Issue
+gh issue view <issue-number>
+
+# 为 Issue 添加评论
+gh issue comment <issue-number> --body "补充信息"
+
+# 查看 Issue 状态
+gh issue status
+```
+
+## 最佳实践
+
+1. **标题清晰**：一眼看出是什么问题
+2. **复现步骤完整**：LD 必须能根据步骤重现问题
+3. **提供修复方案**：展示 QA 对代码的理解
+4. **及时更新**：如有新发现，在 Issue 中添加评论
+5. **关联相关 Issue**：使用 `#issue-number` 语法
+
+## 示例
+
+### 好的 Bug 标题
+- ✅ "测试用例导入错误 - 函数名不匹配"
+- ✅ "Milvus 连接超时导致 API 500 错误"
+- ✅ "Redis checkpointer 在并发请求时崩溃"
+
+### 不好的 Bug 标题
+- ❌ "测试失败"（太笼统）
+- ❌ "有个问题"（没有信息量）
+- ❌ "Fix this"（不专业）
+
+## 相关规则
+
+- 通用规范：[.cursor/rules/general.mdc](mdc:.cursor/rules/general.mdc)
+- Python 规范：[.cursor/rules/python.mdc](mdc:.cursor/rules/python.mdc)
+
+---
+
+**维护者**: AI-ROLE QA  
+**最后更新**: 2025-10-14  
+**版本**: v1.0
