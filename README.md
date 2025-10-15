@@ -286,6 +286,38 @@ LLM_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-xxx
 ```
 
+### 模型别名配置（WordPress 无缝集成）
+
+**⚠️ 重要提示**: 此功能允许系统对外显示 OpenAI 品牌的模型名称（如 `gpt-4o-mini`），但实际使用的是 DeepSeek 模型。启用前请理解相关的法律和品牌风险（详见 [ADR-0003](docs/adr/0003-model-alias-strategy.md)）。
+
+**使用场景**:
+- WordPress 用户希望使用现有 OpenAI 插件直接接入本系统
+- 需要零配置的插件兼容性
+
+**配置示例**:
+```bash
+# 启用模型别名（默认禁用）
+MODEL_ALIAS_ENABLED=true
+
+# 对外显示的模型名称
+MODEL_ALIAS_NAME=gpt-4o-mini
+
+# 模型所有者标识
+MODEL_ALIAS_OWNED_BY=openai
+
+# 隐藏 embedding 模型（仅返回聊天模型）
+HIDE_EMBEDDING_MODELS=true
+```
+
+**API 行为**:
+- **启用后**: `/v1/models` 返回 `gpt-4o-mini`，请求可使用该别名
+- **禁用时**（默认）: 返回实际模型名 `deepseek-chat`
+
+**免责声明**:
+本系统与 OpenAI Inc. 无关。当启用模型别名功能时，返回的模型名称仅用于 API 兼容性目的，实际执行的是 DeepSeek 语言模型。使用者应确保此配置符合当地法律法规和服务条款要求。
+
+**详细文档**: [ADR-0003: 模型别名策略](docs/adr/0003-model-alias-strategy.md)
+
 ### RAG 配置
 
 ```bash

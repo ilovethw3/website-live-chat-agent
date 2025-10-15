@@ -36,6 +36,24 @@ class Settings(BaseSettings):
         default="claude-3-5-sonnet-20241022", description="Anthropic 模型名称"
     )
 
+    # ===== 模型别名配置 =====
+    model_alias_enabled: bool = Field(
+        default=False,
+        description="是否启用模型别名功能（⚠️警告：启用后将使用OpenAI品牌名称，存在商标风险）"
+    )
+    model_alias_name: str = Field(
+        default="gpt-4o-mini",
+        description="对外显示的模型别名（默认：gpt-4o-mini）"
+    )
+    model_alias_owned_by: str = Field(
+        default="openai",
+        description="模型所有者标识（在/v1/models中返回）"
+    )
+    hide_embedding_models: bool = Field(
+        default=True,
+        description="在/v1/models中隐藏embedding模型（仅返回聊天模型）"
+    )
+
     # ===== Embedding 配置 =====
     embedding_provider: Literal["openai", "deepseek", "local"] = Field(
         default="deepseek", description="Embedding 提供商"
