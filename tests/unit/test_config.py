@@ -46,7 +46,7 @@ def test_settings_milvus_collections():
 def test_settings_milvus_database():
     """测试 Milvus 数据库配置"""
     settings = Settings()
-    
+
     # 测试当前值（可能是环境变量覆盖的）
     assert settings.milvus_database in ["default", "chatagent"]
     # 测试类型
