@@ -179,7 +179,7 @@ grep -i "CONFIG_NAME" .env.example docker-compose.yml src/core/config.py
 
 **1. 请求修改**
 ```bash
-gh pr review <PR-number> --request-changes --body "
+gh pr review <PR-number> --comment --body "
 ## 架构审查结果
 
 ### ✅ 通过项
@@ -374,7 +374,7 @@ python -m pytest tests/unit/ -v --cov=src
 ruff check src/ tests/
 
 # 请求修改
-gh pr review <PR-number> --request-changes --body "..."
+gh pr review <PR-number> --comment --body "..."
 
 # 批准PR
 gh pr review <PR-number> --approve --body "..."
