@@ -38,5 +38,4 @@ alwaysApply: true
 本项目使用以下规则文件：
 - general.mdc：通用规范（本文件）
 - python.mdc：Python开发规范
-- document.mdc：文档规范
 - git.mdc：Git提交规范
