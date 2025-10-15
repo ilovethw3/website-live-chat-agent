@@ -199,11 +199,9 @@ index_params = {
 }
 collection.create_index(field_name="embedding", index_params=index_params)
 
-# 标量索引（加速按 session_id 查询）
-collection.create_index(
-    field_name="session_id",
-    index_params={"index_type": "STL_SORT"}  # 排序索引
-)
+# session_id 字段使用默认索引
+# 注意：STL_SORT只支持数值类型，VARCHAR字段使用默认索引即可
+# 默认索引对字符串字段查询性能已经足够
 
 collection.load()
 ```
