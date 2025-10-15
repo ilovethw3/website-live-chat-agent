@@ -168,3 +168,227 @@ def test_settings_case_insensitive():
     # 应该能正确加载不同大小写的环境变量
     assert settings.api_key is not None
 
+
+class TestEmbeddingURLConfiguration:
+    """Embedding URL独立配置测试类"""
+
+    def test_embedding_url_independent_priority(self):
+        """测试独立URL优先级（最高）"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_PROVIDER": "deepseek",
+            "DEEPSEEK_API_KEY": "test-key",
+            "EMBEDDING_BASE_URL": "https://independent.com/v1",
+            "DEEPSEEK_EMBEDDING_BASE_URL": "https://embedding.deepseek.com/v1",
+            "DEEPSEEK_BASE_URL": "https://api.deepseek.com/v1"
+        }, clear=True):
+            settings = Settings()
+            url = settings.get_embedding_base_url()
+            assert url == "https://independent.com/v1"
+
+    def test_embedding_url_provider_specific_priority(self):
+        """测试提供商特定URL优先级（中等）"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_PROVIDER": "deepseek",
+            "DEEPSEEK_API_KEY": "test-key",
+            "EMBEDDING_BASE_URL": "",
+            "DEEPSEEK_EMBEDDING_BASE_URL": "https://embedding.deepseek.com/v1",
+            "DEEPSEEK_BASE_URL": "https://api.deepseek.com/v1"
+        }, clear=True):
+            settings = Settings()
+            url = settings.get_embedding_base_url()
+            assert url == "https://embedding.deepseek.com/v1"
+
+    def test_embedding_url_shared_priority(self):
+        """测试共享URL优先级（最低）"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_PROVIDER": "deepseek",
+            "DEEPSEEK_API_KEY": "test-key",
+            "EMBEDDING_BASE_URL": "",
+            "DEEPSEEK_EMBEDDING_BASE_URL": "",
+            "DEEPSEEK_BASE_URL": "https://api.deepseek.com/v1"
+        }, clear=True):
+            settings = Settings()
+            url = settings.get_embedding_base_url()
+            assert url == "https://api.deepseek.com/v1"
+
+    def test_embedding_url_no_configuration(self):
+        """测试无URL配置"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_PROVIDER": "openai",
+            "OPENAI_API_KEY": "test-key",
+            "EMBEDDING_BASE_URL": "",
+            "OPENAI_EMBEDDING_BASE_URL": "",
+            "OPENAI_BASE_URL": ""
+        }, clear=True):
+            settings = Settings()
+            url = settings.get_embedding_base_url()
+            assert url is None
+
+    def test_embedding_url_openai_provider(self):
+        """测试OpenAI提供商URL配置"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_PROVIDER": "openai",
+            "OPENAI_API_KEY": "test-key",
+            "EMBEDDING_BASE_URL": "",
+            "OPENAI_EMBEDDING_BASE_URL": "https://api.openai.com/v1"
+        }, clear=True):
+            settings = Settings()
+            url = settings.get_embedding_base_url()
+            assert url == "https://api.openai.com/v1"
+
+    def test_embedding_url_siliconflow_provider(self):
+        """测试SiliconFlow提供商URL配置"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_PROVIDER": "siliconflow",
+            "SILICONFLOW_API_KEY": "test-key",
+            "EMBEDDING_BASE_URL": "",
+            "SILICONFLOW_EMBEDDING_BASE_URL": "https://embedding.siliconflow.cn/v1",
+            "SILICONFLOW_BASE_URL": "https://api.siliconflow.cn/v1"
+        }, clear=True):
+            settings = Settings()
+            url = settings.get_embedding_base_url()
+            assert url == "https://embedding.siliconflow.cn/v1"
+
+    def test_embedding_url_anthropic_provider(self):
+        """测试SiliconFlow提供商URL配置（anthropic不是有效的embedding provider）"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_PROVIDER": "siliconflow",
+            "SILICONFLOW_API_KEY": "test-key",
+            "EMBEDDING_BASE_URL": "",
+            "SILICONFLOW_EMBEDDING_BASE_URL": "https://api.siliconflow.com/v1"
+        }, clear=True):
+            settings = Settings()
+            url = settings.get_embedding_base_url()
+            assert url == "https://api.siliconflow.com/v1"
+
+    def test_embedding_url_local_provider(self):
+        """测试本地提供商URL配置"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_PROVIDER": "local",
+            "EMBEDDING_BASE_URL": "",
+            "LOCAL_EMBEDDING_BASE_URL": ""
+        }, clear=True):
+            settings = Settings()
+            url = settings.get_embedding_base_url()
+            assert url is None
+
+    def test_embedding_url_priority_override(self):
+        """测试URL优先级覆盖"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_PROVIDER": "deepseek",
+            "DEEPSEEK_API_KEY": "test-key",
+            "EMBEDDING_BASE_URL": "https://independent.com/v1",
+            "DEEPSEEK_EMBEDDING_BASE_URL": "https://embedding.deepseek.com/v1",
+            "DEEPSEEK_BASE_URL": "https://api.deepseek.com/v1"
+        }, clear=True):
+            settings = Settings()
+            url = settings.get_embedding_base_url()
+            # 独立URL应该覆盖所有其他配置
+            assert url == "https://independent.com/v1"
+
+    def test_embedding_url_validation(self):
+        """测试URL验证功能"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_PROVIDER": "deepseek",
+            "DEEPSEEK_API_KEY": "test-key",
+            "EMBEDDING_BASE_URL": "invalid-url"
+        }, clear=True):
+            settings = Settings()
+            # 验证配置应该包含URL验证结果
+            validation_results = settings.validate_configuration()
+            assert "embedding_url_valid" in validation_results
+            assert "embedding_url_error" in validation_results
+
+    def test_embedding_url_all_providers(self):
+        """测试所有提供商的URL配置"""
+        from unittest.mock import patch
+
+        # anthropic不是有效的embedding provider，使用实际支持的providers
+        providers = ["openai", "deepseek", "siliconflow", "local"]
+
+        for provider in providers:
+            with patch.dict(os.environ, {
+                "EMBEDDING_PROVIDER": provider,
+                f"{provider.upper()}_API_KEY": "test-key",
+                "EMBEDDING_BASE_URL": f"https://{provider}-embedding.com/v1"
+            }, clear=True):
+                settings = Settings()
+                url = settings.get_embedding_base_url()
+                # 所有提供商都应该使用独立URL（最高优先级），包括local
+                assert url == f"https://{provider}-embedding.com/v1"
+
+    def test_embedding_url_complex_configuration(self):
+        """测试复杂配置场景"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_PROVIDER": "deepseek",
+            "DEEPSEEK_API_KEY": "test-key",
+            "EMBEDDING_BASE_URL": "https://global-embedding.com/v1",
+            "OPENAI_EMBEDDING_BASE_URL": "https://api.openai.com/v1",
+            "DEEPSEEK_EMBEDDING_BASE_URL": "https://embedding.deepseek.com/v1",
+            "SILICONFLOW_EMBEDDING_BASE_URL": "https://embedding.siliconflow.cn/v1",
+            "ANTHROPIC_EMBEDDING_BASE_URL": "https://api.anthropic.com/v1",
+            "DEEPSEEK_BASE_URL": "https://api.deepseek.com/v1",
+            "SILICONFLOW_BASE_URL": "https://api.siliconflow.cn/v1"
+        }, clear=True):
+            settings = Settings()
+            url = settings.get_embedding_base_url()
+            # 应该使用独立URL（最高优先级）
+            assert url == "https://global-embedding.com/v1"
+
+    def test_embedding_url_legacy_compatibility(self):
+        """测试向后兼容性"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_PROVIDER": "deepseek",
+            "DEEPSEEK_API_KEY": "test-key",
+            "DEEPSEEK_BASE_URL": "https://api.deepseek.com/v1"
+            # 不设置新的独立URL配置
+        }, clear=True):
+            settings = Settings()
+            url = settings.get_embedding_base_url()
+            # 应该使用传统的共享URL
+            assert url == "https://api.deepseek.com/v1"
+
+    def test_embedding_url_configuration_fields(self):
+        """测试新增的URL配置字段"""
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {
+            "EMBEDDING_BASE_URL": "https://independent.com/v1",
+            "OPENAI_EMBEDDING_BASE_URL": "https://api.openai.com/v1",
+            "DEEPSEEK_EMBEDDING_BASE_URL": "https://embedding.deepseek.com/v1",
+            "SILICONFLOW_EMBEDDING_BASE_URL": "https://embedding.siliconflow.cn/v1",
+            "ANTHROPIC_EMBEDDING_BASE_URL": "https://api.anthropic.com/v1"
+        }, clear=True):
+            settings = Settings()
+
+            # 测试所有新增字段都能正确加载
+            assert settings.get_embedding_base_url() == "https://independent.com/v1"
+            assert settings.openai_embedding_base_url == "https://api.openai.com/v1"
+            assert settings.deepseek_embedding_base_url == "https://embedding.deepseek.com/v1"
+            assert settings.siliconflow_embedding_base_url == "https://embedding.siliconflow.cn/v1"
+            assert settings.anthropic_embedding_base_url == "https://api.anthropic.com/v1"
+

@@ -233,7 +233,7 @@ class TestConfigSeparation:
         # 验证Embedding配置
         assert settings.embedding_api_key == "test-openai-key"
         assert settings.embedding_model_name == "text-embedding-3-small"
-        assert settings.embedding_base_url is None  # OpenAI使用默认URL
+        assert settings.get_embedding_base_url() is None  # OpenAI使用默认URL
 
     def test_backward_compatibility(self):
         """测试向后兼容性"""

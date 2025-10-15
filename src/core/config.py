@@ -75,6 +75,26 @@ class Settings(BaseSettings):
     )
     embedding_dim: int = Field(default=1536, description="Embedding 维度")
 
+    # ===== Embedding URL 配置 =====
+    # 通用独立URL配置（最高优先级）
+    embedding_base_url: str | None = Field(
+        default=None, description="独立Embedding Base URL（优先级最高）"
+    )
+
+    # 提供商特定URL配置
+    openai_embedding_base_url: str | None = Field(
+        default=None, description="OpenAI Embedding Base URL"
+    )
+    deepseek_embedding_base_url: str | None = Field(
+        default=None, description="DeepSeek Embedding Base URL"
+    )
+    siliconflow_embedding_base_url: str | None = Field(
+        default=None, description="SiliconFlow Embedding Base URL"
+    )
+    anthropic_embedding_base_url: str | None = Field(
+        default=None, description="Anthropic Embedding Base URL"
+    )
+
     # ===== Milvus 配置 =====
     milvus_host: str = Field(..., description="Milvus 服务器地址（必填）")
     milvus_port: int = Field(default=19530, description="Milvus 端口")
@@ -224,19 +244,25 @@ class Settings(BaseSettings):
         else:
             raise ValueError(f"Unsupported embedding provider: {self.embedding_provider}")
 
-    @property
-    def embedding_base_url(self) -> str | None:
-        """根据 Embedding 提供商返回对应的 Base URL"""
-        if self.embedding_provider == "deepseek":
-            return self.deepseek_base_url
-        elif self.embedding_provider == "openai":
-            return None  # OpenAI 使用默认 URL
-        elif self.embedding_provider == "local":
-            return None  # 本地模型不需要 Base URL
-        elif self.embedding_provider == "siliconflow":
-            return self.siliconflow_base_url
-        else:
-            raise ValueError(f"Unsupported embedding provider: {self.embedding_provider}")
+    def get_embedding_base_url(self) -> str | None:
+        """根据 Embedding 提供商返回对应的 Base URL（智能优先级）"""
+        from src.core.config_parser import URLConfigParser
+
+        # 构建配置字典
+        config_dict = {
+            "embedding_base_url": self.embedding_base_url,
+            "openai_embedding_base_url": self.openai_embedding_base_url,
+            "deepseek_embedding_base_url": self.deepseek_embedding_base_url,
+            "siliconflow_embedding_base_url": self.siliconflow_embedding_base_url,
+            "anthropic_embedding_base_url": self.anthropic_embedding_base_url,
+            # 传统共享URL配置
+            "deepseek_base_url": self.deepseek_base_url,
+            "siliconflow_base_url": self.siliconflow_base_url,
+        }
+
+        # 使用配置解析器
+        parser = URLConfigParser(config_dict)
+        return parser.resolve_embedding_url(self.embedding_provider)
 
     @property
     def embedding_model_name(self) -> str:
@@ -253,8 +279,30 @@ class Settings(BaseSettings):
             raise ValueError(f"Unsupported embedding provider: {self.embedding_provider}")
 
     def validate_configuration(self) -> dict[str, bool]:
-        """验证配置的有效性"""
+        """验证配置的有效性（增强版）"""
         results = {}
+
+        # 验证所有embedding URL配置
+        from src.core.config_parser import URLConfigParser
+
+        url_parser = URLConfigParser({
+            "embedding_base_url": self.embedding_base_url,
+            "openai_embedding_base_url": self.openai_embedding_base_url,
+            "deepseek_embedding_base_url": self.deepseek_embedding_base_url,
+            "siliconflow_embedding_base_url": self.siliconflow_embedding_base_url,
+            "anthropic_embedding_base_url": self.anthropic_embedding_base_url,
+        })
+
+        # 验证embedding URL
+        try:
+            embedding_url = self.get_embedding_base_url()
+            url_validation = url_parser.validate_url(embedding_url)
+            results["embedding_url_valid"] = url_validation["valid"]
+            if not url_validation["valid"]:
+                results["embedding_url_error"] = url_validation["error"]
+        except Exception as e:
+            results["embedding_url_valid"] = False
+            results["embedding_url_error"] = str(e)
 
         # 验证LLM配置
         try:

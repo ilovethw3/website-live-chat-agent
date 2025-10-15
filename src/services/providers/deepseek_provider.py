@@ -48,15 +48,20 @@ class DeepSeekEmbeddingProvider(EmbeddingProvider):
     """DeepSeek Embedding提供商"""
 
     def get_required_config_fields(self) -> List[str]:
-        return ["api_key", "base_url"]
+        return ["api_key"]  # base_url现在是可选的
 
     def create_embeddings(self) -> OpenAIEmbeddings:
-        """创建DeepSeek Embeddings实例"""
-        return OpenAIEmbeddings(
-            model=self.config.get("model", "deepseek-embedding"),
-            openai_api_key=self.config["api_key"],
-            openai_api_base=self.config["base_url"],
-        )
+        """创建DeepSeek Embeddings实例（支持独立URL）"""
+        config = {
+            "model": self.config.get("model", "deepseek-embedding"),
+            "openai_api_key": self.config["api_key"],
+        }
+
+        # 添加base_url（如果提供）
+        if "base_url" in self.config and self.config["base_url"]:
+            config["openai_api_base"] = self.config["base_url"]
+
+        return OpenAIEmbeddings(**config)
 
     def get_models(self) -> List[str]:
         """获取支持的DeepSeek Embedding模型列表"""

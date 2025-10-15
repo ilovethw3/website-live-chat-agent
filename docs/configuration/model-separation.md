@@ -30,6 +30,28 @@ OPENAI_API_KEY=your-openai-key
 EMBEDDING_MODEL=text-embedding-3-small
 ```
 
+### 独立URL配置原理
+
+系统支持Embedding模型的独立URL配置，实现LLM和Embedding的完全独立部署：
+
+**智能优先级机制**:
+1. **独立URL** (最高优先级): `EMBEDDING_BASE_URL`
+2. **提供商特定URL**: `DEEPSEEK_EMBEDDING_BASE_URL`, `OPENAI_EMBEDDING_BASE_URL` 等
+3. **共享URL** (最低优先级): 传统的 `DEEPSEEK_BASE_URL`, `SILICONFLOW_BASE_URL` 等
+
+**配置示例**:
+```bash
+# 使用独立URL（最高优先级）
+EMBEDDING_BASE_URL=https://custom-embedding-api.com/v1
+
+# 或使用提供商特定URL
+DEEPSEEK_EMBEDDING_BASE_URL=https://embedding.deepseek.com/v1
+OPENAI_EMBEDDING_BASE_URL=https://api.openai.com/v1
+
+# 或回退到共享URL（向后兼容）
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+```
+
 ## 配置示例
 
 ### 1. 基础配置分离
@@ -89,7 +111,53 @@ SILICONFLOW_API_KEY=your-sf-key
 SILICONFLOW_EMBEDDING_MODEL=BAAI/bge-large-zh-v1.5
 ```
 
-### 3. 高级配置
+### 3. 独立URL配置
+
+#### 使用独立URL（最高优先级）
+```bash
+# LLM配置
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-your-deepseek-key
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+DEEPSEEK_MODEL=deepseek-chat
+
+# Embedding配置 - 使用独立URL
+EMBEDDING_PROVIDER=openai
+OPENAI_API_KEY=sk-your-openai-key
+EMBEDDING_BASE_URL=https://custom-embedding-api.com/v1  # 独立URL
+EMBEDDING_MODEL=text-embedding-3-small
+```
+
+#### 使用提供商特定URL
+```bash
+# LLM配置
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-your-deepseek-key
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+DEEPSEEK_MODEL=deepseek-chat
+
+# Embedding配置 - 使用提供商特定URL
+EMBEDDING_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-your-deepseek-key
+DEEPSEEK_EMBEDDING_BASE_URL=https://embedding.deepseek.com/v1  # 提供商特定URL
+EMBEDDING_MODEL=deepseek-embedding
+```
+
+#### 混合URL配置
+```bash
+# LLM使用默认URL，Embedding使用独立URL
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-your-openai-key
+OPENAI_MODEL=gpt-4o-mini
+
+# Embedding使用独立URL
+EMBEDDING_PROVIDER=openai
+OPENAI_API_KEY=sk-your-openai-key
+OPENAI_EMBEDDING_BASE_URL=https://custom-openai-embedding.com/v1
+EMBEDDING_MODEL=text-embedding-3-small
+```
+
+### 4. 高级配置
 
 #### 性能优化配置
 ```bash
@@ -113,6 +181,20 @@ DEEPSEEK_MODEL=deepseek-chat  # 经济型模型
 EMBEDDING_PROVIDER=openai
 OPENAI_API_KEY=sk-your-openai-key
 EMBEDDING_MODEL=text-embedding-3-large  # 高性能模型
+```
+
+#### 完全独立部署配置
+```bash
+# LLM和Embedding完全独立部署
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-your-deepseek-key
+DEEPSEEK_BASE_URL=https://llm-api.company.com/v1
+DEEPSEEK_MODEL=deepseek-chat
+
+EMBEDDING_PROVIDER=openai
+OPENAI_API_KEY=sk-your-openai-key
+EMBEDDING_BASE_URL=https://embedding-api.company.com/v1
+EMBEDDING_MODEL=text-embedding-3-small
 ```
 
 ## 配置验证
@@ -311,6 +393,40 @@ ModelError: Model 'invalid-model' not found
 
 # 解决: 使用支持的模型
 DEEPSEEK_MODEL=deepseek-chat  # 正确
+```
+
+#### 4. URL配置冲突
+```bash
+# 错误: URL格式不正确
+ValueError: Invalid URL format: invalid-url. Must start with http:// or https://
+
+# 解决: 使用正确的URL格式
+EMBEDDING_BASE_URL=https://api.example.com/v1  # 正确
+```
+
+#### 5. 优先级配置问题
+```bash
+# 问题: 同时配置了多个URL，不确定使用哪个
+EMBEDDING_BASE_URL=https://custom-api.com/v1
+DEEPSEEK_EMBEDDING_BASE_URL=https://embedding.deepseek.com/v1
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+
+# 解决: 系统会按优先级选择 EMBEDDING_BASE_URL
+# 优先级: 独立URL > 提供商特定URL > 共享URL
+```
+
+#### 6. 向后兼容性问题
+```bash
+# 问题: 现有配置可能不工作
+# 旧配置
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+EMBEDDING_PROVIDER=deepseek
+
+# 新配置需要明确指定
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+EMBEDDING_PROVIDER=deepseek
+# 或者使用新的独立URL配置
+DEEPSEEK_EMBEDDING_BASE_URL=https://embedding.deepseek.com/v1
 ```
 
 ### 调试工具

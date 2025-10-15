@@ -182,7 +182,7 @@ def _create_plugin_embeddings(provider: str) -> Any:
     }
 
     # 添加 Base URL（如果需要）
-    base_url = settings.embedding_base_url
+    base_url = settings.get_embedding_base_url()
     if base_url:
         config["base_url"] = base_url
 
