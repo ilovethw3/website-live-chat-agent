@@ -57,7 +57,7 @@ async def router_node(state: AgentState) -> dict[str, Any]:
     # 判断是否为简单打招呼
     is_greeting = any(kw in query.lower() for kw in greeting_keywords)
     if is_greeting and len(query) < 20:  # 短消息且是打招呼
-        logger.info(f"🎯 Router: Direct response (greeting)")
+        logger.info("🎯 Router: Direct response (greeting)")
         return {
             "next_step": "direct",
             "tool_calls": [{"node": "router", "decision": "direct", "reason": "greeting"}]
@@ -67,13 +67,13 @@ async def router_node(state: AgentState) -> dict[str, Any]:
     needs_retrieval = any(kw in query for kw in knowledge_keywords)
 
     if needs_retrieval:
-        logger.info(f"🎯 Router: Retrieve from knowledge base (keywords matched)")
+        logger.info("🎯 Router: Retrieve from knowledge base (keywords matched)")
         return {
             "next_step": "retrieve",
             "tool_calls": [{"node": "router", "decision": "retrieve", "reason": "keywords"}]
         }
     else:
-        logger.info(f"🎯 Router: Direct response (no keywords)")
+        logger.info("🎯 Router: Direct response (no keywords)")
         return {
             "next_step": "direct",
             "tool_calls": [{"node": "router", "decision": "direct", "reason": "no_keywords"}]
@@ -93,6 +93,10 @@ async def retrieve_node(state: AgentState) -> dict[str, Any]:
         更新的状态（包含 retrieved_docs 和 confidence_score）
     """
     # 获取查询
+    if not state["messages"]:
+        logger.warning("⚠️ Retrieve node: empty messages")
+        return {"retrieved_docs": [], "confidence_score": 0.0}
+
     last_message = state["messages"][-1]
     query = last_message.content if isinstance(last_message, HumanMessage) else ""
 
@@ -113,12 +117,12 @@ async def retrieve_node(state: AgentState) -> dict[str, Any]:
         metadata = result.get("metadata", {})
         title = metadata.get("title", "未命名文档")
         url = metadata.get("url", "")
-        
+
         doc_text = f"[文档{i}] {title}"
         if url:
             doc_text += f" (来源: {url})"
         doc_text += f"\n{result['text']}"
-        
+
         formatted_docs.append(doc_text)
 
     # 计算置信度（使用最高分数）
@@ -159,11 +163,12 @@ async def call_llm_node(state: AgentState) -> dict[str, Any]:
         更新的状态（包含新的 AI 消息）
     """
     retrieved_docs = state.get("retrieved_docs", [])
-    
+
     # 构建系统提示词
     if retrieved_docs:
         # RAG 模式
-        context = "\n\n".join(retrieved_docs)
+        # retrieved_docs 是字典列表，需要提取 text 字段
+        context = "\n\n".join([doc.get("text", str(doc)) for doc in retrieved_docs])
         system_prompt = f"""你是一个专业的网站客服助手。
 
 **知识库上下文**:
@@ -217,12 +222,12 @@ async def call_llm_node(state: AgentState) -> dict[str, Any]:
 
     except Exception as e:
         logger.error(f"❌ LLM call failed: {e}")
-        
+
         # 返回错误消息
         error_message = AIMessage(
             content="抱歉，系统遇到了一些问题，请稍后再试。"
         )
-        
+
         return {
             "messages": [error_message],
             "error": str(e),

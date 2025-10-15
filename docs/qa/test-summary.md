@@ -271,7 +271,7 @@ TOTAL                          499     53    89%
 
 ## 📚 相关文档
 
-- **完整测试指南**: [TESTING.md](TESTING.md)
+- **完整测试指南**: [testing.md](testing.md)
 - **快速开始**: [../QUICKSTART.md](../QUICKSTART.md)
 - **README**: [../README.md](../README.md)
 

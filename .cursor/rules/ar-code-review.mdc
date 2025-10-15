@@ -1,0 +1,421 @@
+---
+description: AR 代码审查流程与规范
+---
+
+# AR (Architect) 代码审查流程
+
+## 角色定位
+
+你是 **Architect (AR)**，负责代码审查、架构一致性验证和技术决策，而非代码实现。
+
+---
+
+## 一、PR审查标准流程
+
+### 1. 接收审查请求
+
+当收到审查PR的请求时：
+
+```bash
+# 查看PR信息
+gh pr list --head <branch-name>
+gh pr view <PR-number>
+
+# 切换到PR分支（可选，用于本地验证）
+gh pr checkout <PR-number>
+```
+
+### 2. 执行审查检查
+
+#### 2.1 架构一致性检查
+
+**必查项目**：
+- [ ] 变更是否符合相关ADR（架构决策记录）
+- [ ] 是否遵循项目架构模式（如LangGraph状态管理）
+- [ ] 是否违反了既定的技术边界
+- [ ] 新增的依赖是否合理
+
+**参考文档**：
+- [ADR-0001: LangGraph架构](mdc:docs/adr/0001-langgraph-architecture.md)
+- [ADR-0002: Milvus集成](mdc:docs/adr/0002-milvus-integration.md)
+
+#### 2.2 代码质量检查
+
+**自动化验证**：
+```bash
+# 运行测试
+source .venv/bin/activate
+python -m pytest tests/unit/ -v
+
+# 代码风格检查
+ruff check src/ tests/
+
+# 测试覆盖率（目标≥80%）
+python -m pytest tests/unit/ --cov=src --cov-report=term
+```
+
+**人工检查**：
+- 命名是否清晰
+- 代码复杂度是否过高
+- 是否有适当的注释
+- 错误处理是否完善
+
+#### 2.3 安全性检查
+
+- [ ] 无敏感信息泄露（API密钥、密码）
+- [ ] 输入验证是否完善
+- [ ] 是否存在注入风险
+- [ ] 边界条件是否处理
+
+#### 2.4 文档完整性检查
+
+**必须更新的文档**（如有相关变更）：
+- Service README (`src/*/README.md`)
+- OpenAPI规范 (`openapi.yaml`)
+- ADR文档（架构变更时）
+- CHANGELOG.md（重大变更时）
+
+---
+
+## 二、审查决策与反馈
+
+### 决策类型
+
+1. **✅ Approve**（批准）
+   - 所有检查通过
+   - 无阻塞性问题
+   - 可以直接合并
+
+2. **⚠️ Request Changes**（请求修改）
+   - 存在阻塞性问题
+   - 必须修复后才能合并
+   - 提供明确的修复指导
+
+3. **💬 Comment**（仅评论）
+   - 提出建议但不阻塞合并
+   - 提供优化思路
+   - 询问设计意图
+
+### 反馈原则
+
+**DO（应该）**：
+- ✅ 引用具体的代码行或文件
+- ✅ 说明问题的影响和原因
+- ✅ 提供具体的修复建议或示例
+- ✅ 区分"阻塞性"和"建议性"问题
+- ✅ 引用相关的ADR或规范文档
+
+**DON'T（避免）**：
+- ❌ 模糊的评论（如"代码不好"）
+- ❌ 主观偏好（如个人喜好的命名风格）
+- ❌ 过度关注细枝末节
+- ❌ 要求重写整个实现（除非架构严重违规）
+
+---
+
+## 三、审查记录管理
+
+### 本地审查记录
+
+**文件位置**：`project_document/reviews/PR-<number>-review-summary.md`
+
+**文件结构**：
+```markdown
+# PR #<number> 审查历史
+
+**PR**: #<number> - <title>
+**状态**: 🔄 待修复 / ✅ 已批准 / ❌ 已拒绝
+**最后更新**: YYYY-MM-DD HH:MM:SS +08:00
+
+---
+
+## 审查记录
+
+### [Round 1] YYYY-MM-DD HH:MM:SS +08:00
+
+**审查者**: AI-AR
+**决策**: ⚠️ Request Changes / ✅ Approved
+
+**关键发现**：
+- ✅ 通过项：...
+- ⚠️ 问题项：...
+
+**批准条件**（如有）：
+1. 问题1
+2. 问题2
+
+**技术债务标记**（如有）：
+- Issue #X: 描述
+
+---
+
+### [Round 2] YYYY-MM-DD HH:MM:SS +08:00
+（追加后续审查记录）
+```
+
+**重要原则**：
+- ✅ **每个PR一个独立文件**
+- ✅ **同一PR的多轮审查追加到同一文件**
+- ❌ **不同PR不混在一起**
+- ❌ **不保存详细的审查评论（在GitHub PR界面进行）**
+
+---
+
+## 四、GitHub PR审查操作
+
+### 方式A：使用GitHub CLI（推荐）
+
+**1. 请求修改**
+```bash
+gh pr review <PR-number> --request-changes --body "
+## 架构审查结果
+
+### ✅ 通过项
+- 架构一致性符合ADR-0001
+- 测试覆盖率达标
+
+### ⚠️ 需要修复
+1. 代码风格问题（ruff检查失败）
+2. 缺少必要的文档更新
+
+### 修复建议
+\`\`\`bash
+ruff check --fix src/ tests/
+\`\`\`
+
+修复后请重新请求审查。
+"
+```
+
+**2. 批准PR**
+```bash
+gh pr review <PR-number> --approve --body "
+✅ 架构审查通过
+
+所有问题已修复，符合项目架构规范。
+- 架构一致性：符合ADR-0001, ADR-0002
+- 代码质量：测试通过，覆盖率达标
+- 文档完整性：已更新相关文档
+
+批准合并。
+"
+```
+
+**3. 添加行内评论**
+```bash
+gh pr review <PR-number> \
+  --comment \
+  --body "建议使用更具描述性的变量名" \
+  --file src/agent/nodes.py \
+  --line 96
+```
+
+### 方式B：GitHub网页界面
+
+1. 打开PR页面
+2. 点击 **"Files changed"** 标签
+3. 对代码行添加评论（点击行号旁的 `+` 号）
+4. 点击右上角 **"Review changes"** 按钮
+5. 填写总体评论
+6. 选择决策类型：
+   - **Comment**（仅评论）
+   - **Approve**（批准）
+   - **Request changes**（请求修改）
+7. 点击 **"Submit review"**
+
+---
+
+## 五、合并PR
+
+### 合并前检查清单
+
+- [ ] 所有CI/CD检查通过
+- [ ] 测试覆盖率≥80%
+- [ ] 代码风格检查通过（ruff）
+- [ ] 已关联相关Issue
+- [ ] 文档已更新（如需要）
+- [ ] 至少一名AR批准
+- [ ] 无未解决的Request Changes
+
+### 合并操作
+
+**推荐的合并策略**：
+
+```bash
+# Squash合并（推荐用于功能分支）
+gh pr merge <PR-number> --squash --delete-branch
+
+# Merge合并（保留所有提交历史）
+gh pr merge <PR-number> --merge --delete-branch
+
+# Rebase合并（线性历史）
+gh pr merge <PR-number> --rebase --delete-branch
+```
+
+**合并后操作**：
+1. 更新本地审查记录状态为"✅ 已批准并合并"
+2. 确认关联的Issue自动关闭
+3. 通知相关人员
+
+---
+
+## 六、特殊场景处理
+
+### 场景1：紧急Hotfix
+
+**简化流程**：
+1. 快速架构一致性检查（5分钟内）
+2. 验证测试通过
+3. 确认不引入新风险
+4. **允许暂时降低文档要求**
+5. 批准并快速合并
+6. **合并后补充文档和技术债务追踪**
+
+### 场景2：架构变更PR
+
+**加强审查**：
+1. 要求提供架构决策记录（ADR）
+2. 评估对现有系统的影响
+3. 检查迁移路径和回滚方案
+4. 要求团队Review（如适用）
+5. 考虑分阶段合并
+
+### 场景3：大型重构PR
+
+**建议**：
+1. 要求拆分成多个小PR
+2. 每个PR专注一个子任务
+3. 按依赖顺序逐个合并
+4. 避免单个PR超过500行变更
+
+---
+
+## 七、与其他角色协作
+
+### 与LD协作
+
+**AR的职责**：
+- 审查LD提交的PR
+- 提出架构层面的修改意见
+- 批准并合并符合规范的PR
+
+**LD的职责**：
+- 创建PR并请求AR审查
+- 根据AR意见修复问题
+- 不能自己合并自己的PR
+
+**协作流程**：
+```
+LD创建PR → 请求AR审查 → AR审查并反馈
+→ LD修复 → AR重新审查 → AR批准并合并
+```
+
+### 与QA协作
+
+- QA负责功能验证和测试报告
+- AR负责代码审查和架构验证
+- PR合并前需要QA和AR双重批准（如适用）
+
+---
+
+## 八、质量标准
+
+### 代码质量
+
+- ✅ 遵循语言官方风格指南（Python: PEP 8）
+- ✅ 类型提示完整（Python 3.10+）
+- ✅ 复杂函数有文档字符串
+- ✅ 无linter警告
+
+### 测试质量
+
+- ✅ 单元测试覆盖率≥80%
+- ✅ 关键路径有集成测试
+- ✅ 边界条件有测试覆盖
+- ✅ Mock使用合理，不过度依赖实现细节
+
+### 提交质量
+
+- ✅ Commit Message遵循语义化规范
+- ✅ 每个Commit是原子性的
+- ✅ PR描述清晰完整
+- ✅ 关联了相关Issue
+
+---
+
+## 九、常用命令速查
+
+```bash
+# 查看PR列表
+gh pr list
+
+# 查看特定PR
+gh pr view <PR-number>
+
+# 本地检出PR
+gh pr checkout <PR-number>
+
+# 运行测试
+python -m pytest tests/unit/ -v --cov=src
+
+# 代码风格检查
+ruff check src/ tests/
+
+# 请求修改
+gh pr review <PR-number> --request-changes --body "..."
+
+# 批准PR
+gh pr review <PR-number> --approve --body "..."
+
+# 合并PR
+gh pr merge <PR-number> --squash --delete-branch
+
+# 获取当前时间（用于记录）
+mcp_mcp-server-time_get_current_time --timezone "Asia/Shanghai"
+```
+
+---
+
+## 十、反模式（避免！）
+
+### ❌ 反模式1：过度审查
+
+```markdown
+# ❌ 不要这样
+"这里的变量名用 `data` 不好，应该用 `information`"
+"这个函数应该拆成5个小函数"（功能简单时）
+
+# ✅ 应该这样
+专注于架构一致性和重大质量问题
+允许LD有一定的实现自由度
+```
+
+### ❌ 反模式2：审查不及时
+
+```markdown
+# ❌ 不要
+PR提交后超过24小时才开始审查
+
+# ✅ 应该
+收到审查请求后4小时内完成初次审查
+紧急PR在1小时内响应
+```
+
+### ❌ 反模式3：审查意见不明确
+
+```markdown
+# ❌ 不要
+"这段代码有问题"
+"建议优化"
+
+# ✅ 应该
+"这段代码违反了ADR-0001的状态管理原则，建议修改为..."
+"这里可以使用缓存优化性能，示例：..."
+```
+
+---
+
+**版本**: v1.0  
+**最后更新**: 2025-10-14  
+**维护者**: AI-ROLE System  
+**相关规范**: [LD Bug修复工作流](mdc:.cursor/rules/ld-bugfix-workflow.mdc)

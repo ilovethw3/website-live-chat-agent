@@ -5,7 +5,7 @@
 """
 
 
-class AppException(Exception):
+class AppException(Exception):  # noqa: N818 - 保持向后兼容，将在后续PR中重命名为AppError
     """应用基础异常"""
 
     def __init__(self, message: str, code: str | None = None) -> None:
@@ -21,7 +21,14 @@ class ConfigurationError(AppException):
         super().__init__(message, code="configuration_error")
 
 
-class MilvusConnectionError(AppException):
+class MilvusError(AppException):
+    """Milvus 相关错误基类"""
+
+    def __init__(self, message: str, code: str = "milvus_error") -> None:
+        super().__init__(message, code=code)
+
+
+class MilvusConnectionError(MilvusError):
     """Milvus 连接错误"""
 
     def __init__(self, message: str) -> None:

@@ -4,8 +4,7 @@
 测试 /api/v1/knowledge 相关端点。
 """
 
-import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch
 
 
 def test_knowledge_upsert_unauthorized(test_client):
@@ -30,7 +29,7 @@ def test_knowledge_upsert_success(
     }
 
     with patch("src.api.v1.knowledge.milvus_service", mock_milvus_service):
-        with patch("src.api.v1.knowledge.get_embeddings", return_value=mock_embeddings):
+        with patch("src.services.llm_factory.create_embeddings", return_value=mock_embeddings):
             response = test_client.post(
                 "/api/v1/knowledge/upsert",
                 headers=api_headers,
@@ -116,7 +115,7 @@ def test_knowledge_search_success(
     ]
 
     with patch("src.api.v1.knowledge.milvus_service", mock_milvus_service):
-        with patch("src.api.v1.knowledge.get_embeddings", return_value=mock_embeddings):
+        with patch("src.services.llm_factory.create_embeddings", return_value=mock_embeddings):
             response = test_client.get(
                 "/api/v1/knowledge/search",
                 headers=api_headers,
@@ -154,7 +153,7 @@ def test_knowledge_search_with_top_k(
     ]
 
     with patch("src.api.v1.knowledge.milvus_service", mock_milvus_service):
-        with patch("src.api.v1.knowledge.get_embeddings", return_value=mock_embeddings):
+        with patch("src.services.llm_factory.create_embeddings", return_value=mock_embeddings):
             response = test_client.get(
                 "/api/v1/knowledge/search",
                 headers=api_headers,
@@ -173,7 +172,7 @@ def test_knowledge_search_no_results(
     mock_milvus_service.search_knowledge.return_value = []
 
     with patch("src.api.v1.knowledge.milvus_service", mock_milvus_service):
-        with patch("src.api.v1.knowledge.get_embeddings", return_value=mock_embeddings):
+        with patch("src.services.llm_factory.create_embeddings", return_value=mock_embeddings):
             response = test_client.get(
                 "/api/v1/knowledge/search",
                 headers=api_headers,
@@ -197,7 +196,7 @@ def test_knowledge_upsert_with_chunks(
     }
 
     with patch("src.api.v1.knowledge.milvus_service", mock_milvus_service):
-        with patch("src.api.v1.knowledge.get_embeddings", return_value=mock_embeddings):
+        with patch("src.services.llm_factory.create_embeddings", return_value=mock_embeddings):
             response = test_client.post(
                 "/api/v1/knowledge/upsert",
                 headers=api_headers,

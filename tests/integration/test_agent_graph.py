@@ -4,8 +4,9 @@
 测试 Agent 的端到端执行流程。
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import AsyncMock, patch
 from langchain_core.messages import HumanMessage
 
 from src.agent.graph import get_agent_app
@@ -15,8 +16,8 @@ from src.agent.state import AgentState
 @pytest.mark.asyncio
 async def test_agent_graph_simple_chat(mock_llm, mock_milvus_service):
     """测试简单对话流程"""
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
-        with patch("src.agent.nodes.milvus_service", mock_milvus_service):
+    with patch("src.services.llm_factory.create_llm", return_value=mock_llm):
+        with patch("src.agent.tools.milvus_service", mock_milvus_service):
             app = get_agent_app()
 
             initial_state: AgentState = {
@@ -47,9 +48,9 @@ async def test_agent_graph_with_rag(mock_llm, mock_milvus_service, mock_embeddin
         }
     ]
 
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
-        with patch("src.agent.nodes.milvus_service", mock_milvus_service):
-            with patch("src.agent.nodes.get_embeddings", return_value=mock_embeddings):
+    with patch("src.services.llm_factory.create_llm", return_value=mock_llm):
+        with patch("src.agent.tools.milvus_service", mock_milvus_service):
+            with patch("src.services.llm_factory.create_embeddings", return_value=mock_embeddings):
                 app = get_agent_app()
 
                 initial_state: AgentState = {
@@ -71,8 +72,8 @@ async def test_agent_graph_with_rag(mock_llm, mock_milvus_service, mock_embeddin
 @pytest.mark.asyncio
 async def test_agent_graph_multi_turn(mock_llm, mock_milvus_service):
     """测试多轮对话"""
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
-        with patch("src.agent.nodes.milvus_service", mock_milvus_service):
+    with patch("src.services.llm_factory.create_llm", return_value=mock_llm):
+        with patch("src.agent.tools.milvus_service", mock_milvus_service):
             app = get_agent_app()
 
             config = {"configurable": {"thread_id": "test-thread-3"}}
@@ -105,7 +106,7 @@ async def test_agent_graph_error_handling(mock_llm):
     # Mock LLM 抛出异常
     mock_llm.ainvoke.side_effect = Exception("LLM error")
 
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
+    with patch("src.services.llm_factory.create_llm", return_value=mock_llm):
         app = get_agent_app()
 
         initial_state: AgentState = {
@@ -125,8 +126,8 @@ async def test_agent_graph_error_handling(mock_llm):
 @pytest.mark.asyncio
 async def test_agent_graph_state_persistence(mock_llm, mock_milvus_service):
     """测试状态持久化"""
-    with patch("src.agent.nodes.get_llm", return_value=mock_llm):
-        with patch("src.agent.nodes.milvus_service", mock_milvus_service):
+    with patch("src.services.llm_factory.create_llm", return_value=mock_llm):
+        with patch("src.agent.tools.milvus_service", mock_milvus_service):
             app = get_agent_app()
 
             thread_id = "test-thread-persist"
@@ -140,7 +141,7 @@ async def test_agent_graph_state_persistence(mock_llm, mock_milvus_service):
                 "session_id": "test-persist-1",
             }
 
-            result1 = await app.ainvoke(state1, config=config)
+            _ = await app.ainvoke(state1, config=config)
 
             # 第二次调用，使用相同的 thread_id
             state2: AgentState = {

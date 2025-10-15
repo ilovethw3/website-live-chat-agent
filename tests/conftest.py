@@ -8,11 +8,11 @@
 """
 
 import os
-import pytest
-from typing import AsyncGenerator, Generator
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Generator
+from unittest.mock import AsyncMock, MagicMock
 
 import fakeredis.aioredis
+import pytest
 from fastapi.testclient import TestClient
 from langchain_core.messages import AIMessage, HumanMessage
 

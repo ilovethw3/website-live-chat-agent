@@ -88,9 +88,9 @@ def compile_agent_graph() -> any:
     elif settings.langgraph_checkpointer == "redis":
         logger.info("📝 Using RedisSaver for checkpointing")
         try:
-            from langgraph.checkpoint.redis import RedisSaver
             import redis
-            
+            from langgraph.checkpoint.redis import RedisSaver
+
             redis_client = redis.Redis(
                 host=settings.redis_host,
                 port=settings.redis_port,
@@ -98,7 +98,7 @@ def compile_agent_graph() -> any:
                 db=settings.redis_db,
                 decode_responses=False,  # RedisSaver 需要 bytes
             )
-            
+
             checkpointer = RedisSaver(redis_client)
         except ImportError:
             logger.warning("⚠️ langgraph-checkpoint-redis not installed, falling back to MemorySaver")
@@ -112,7 +112,7 @@ def compile_agent_graph() -> any:
 
     # 编译
     app = workflow.compile(checkpointer=checkpointer)
-    
+
     logger.info("✅ LangGraph App compiled successfully")
     return app
 

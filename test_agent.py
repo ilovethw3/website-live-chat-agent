@@ -35,7 +35,7 @@ async def test_agent():
     # 测试用例 1: 简单打招呼
     logger.info("\n📝 Test Case 1: Simple Greeting")
     logger.info("-" * 50)
-    
+
     state1 = {
         "messages": [HumanMessage(content="你好")],
         "retrieved_docs": [],
@@ -45,19 +45,19 @@ async def test_agent():
         "error": None,
         "confidence_score": None,
     }
-    
+
     config1 = {"configurable": {"thread_id": "test-session-1"}}
-    
+
     result1 = await app.ainvoke(state1, config1)
-    
+
     logger.info(f"Router Decision: {result1.get('next_step')}")
     logger.info(f"Retrieved Docs: {len(result1.get('retrieved_docs', []))}")
     logger.info(f"Response: {result1['messages'][-1].content}")
-    
+
     # 测试用例 2: 需要检索的问题（模拟）
     logger.info("\n📝 Test Case 2: Question Requiring Retrieval")
     logger.info("-" * 50)
-    
+
     state2 = {
         "messages": [HumanMessage(content="你们的退货政策是什么？")],
         "retrieved_docs": [],
@@ -67,20 +67,20 @@ async def test_agent():
         "error": None,
         "confidence_score": None,
     }
-    
+
     config2 = {"configurable": {"thread_id": "test-session-2"}}
-    
+
     result2 = await app.ainvoke(state2, config2)
-    
+
     logger.info(f"Router Decision: {result2.get('next_step')}")
     logger.info(f"Retrieved Docs: {len(result2.get('retrieved_docs', []))}")
     logger.info(f"Confidence Score: {result2.get('confidence_score')}")
     logger.info(f"Response: {result2['messages'][-1].content}")
-    
+
     # 测试用例 3: 流式响应
     logger.info("\n📝 Test Case 3: Streaming Response")
     logger.info("-" * 50)
-    
+
     state3 = {
         "messages": [HumanMessage(content="介绍一下你们的产品")],
         "retrieved_docs": [],
@@ -90,13 +90,13 @@ async def test_agent():
         "error": None,
         "confidence_score": None,
     }
-    
+
     config3 = {"configurable": {"thread_id": "test-session-3"}}
-    
+
     logger.info("Streaming chunks:")
     async for chunk in app.astream(state3, config3):
         logger.info(f"  - Node: {list(chunk.keys())}")
-    
+
     logger.info("\n" + "=" * 50)
     logger.info("✅ All tests completed!")
     logger.info("=" * 50)

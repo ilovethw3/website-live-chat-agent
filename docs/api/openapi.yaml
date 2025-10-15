@@ -45,6 +45,32 @@ security:
 
 paths:
   # ==================== OpenAI 兼容端点 ====================
+  /v1/models:
+    get:
+      summary: 列出可用模型（OpenAI 兼容）
+      description: |
+        返回兼容 OpenAI 的模型列表，用于 SDK 初始化和模型选择。
+      operationId: listModels
+      tags:
+        - Chat
+      responses:
+        '200':
+          description: 模型列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenAIModelList'
+              example:
+                object: list
+                data:
+                  - id: deepseek-chat
+                    object: model
+                    created: 1699999999
+                    owned_by: provider:deepseek
+                  - id: deepseek-embedding
+                    object: model
+                    created: 1699999999
+                    owned_by: provider:deepseek
   /v1/chat/completions:
     post:
       summary: 创建对话完成（OpenAI 兼容）
@@ -433,6 +459,37 @@ components:
         示例: `Authorization: Bearer sk-agent-12345abcde`
 
   schemas:
+    # ===== OpenAI 模型列表 =====
+    OpenAIModelRef:
+      type: object
+      required: [id, object, created, owned_by]
+      properties:
+        id:
+          type: string
+          description: 模型 ID（例如 deepseek-chat）
+        object:
+          type: string
+          enum: [model]
+          description: 固定为 "model"
+        created:
+          type: integer
+          description: 创建时间（Unix 时间戳）
+        owned_by:
+          type: string
+          description: 模型提供方（例如 provider:deepseek）
+
+    OpenAIModelList:
+      type: object
+      required: [object, data]
+      properties:
+        object:
+          type: string
+          enum: [list]
+          description: 固定为 "list"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/OpenAIModelRef'
     # ===== OpenAI 兼容模型 =====
     ChatMessage:
       type: object

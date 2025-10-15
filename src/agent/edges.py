@@ -22,7 +22,7 @@ def should_retrieve(state: AgentState) -> str:
         下一个节点名称: "retrieve" 或 "llm"
     """
     next_step = state.get("next_step", "direct")
-    
+
     if next_step == "retrieve":
         logger.debug("🔀 Conditional edge: routing to retrieve node")
         return "retrieve"
@@ -50,14 +50,14 @@ def should_continue(state: AgentState) -> str:
     if state.get("error"):
         logger.warning("⚠️ Error detected, ending workflow")
         return "END"
-    
+
     # 检查置信度（可选：低置信度时人工介入）
     confidence = state.get("confidence_score")
     if confidence is not None and confidence < 0.5:
         logger.warning(f"⚠️ Low confidence ({confidence:.2f}), but continuing (no human review)")
         # 未来可以在这里添加人工介入节点
         # return "human_review"
-    
+
     # 正常结束
     logger.debug("✅ Workflow completed successfully")
     return "END"
