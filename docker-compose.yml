@@ -23,6 +23,7 @@ services:
       - MILVUS_PORT=${MILVUS_PORT:-19530}
       - MILVUS_USER=${MILVUS_USER:-root}
       - MILVUS_PASSWORD=${MILVUS_PASSWORD:-}
+      - MILVUS_DATABASE=${MILVUS_DATABASE:-default}
       
       # Redis 配置
       - REDIS_HOST=redis

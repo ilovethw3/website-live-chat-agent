@@ -46,6 +46,7 @@ class MilvusService:
                 port=settings.milvus_port,
                 user=settings.milvus_user,
                 password=settings.milvus_password,
+                db_name=settings.milvus_database,
                 timeout=10,
             )
             logger.info(

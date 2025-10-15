@@ -38,19 +38,19 @@ router = APIRouter(dependencies=[Depends(verify_api_key)])
 async def list_models() -> OpenAIModelList:
     """
     OpenAI 兼容的模型列表端点 (/v1/models)。
-    
+
     ⚠️ 当启用模型别名功能时（MODEL_ALIAS_ENABLED=true）：
     - 返回配置的别名模型（如 gpt-4o-mini）
     - owned_by 字段为配置的值（如 openai）
     - 仅返回聊天模型（不返回 embedding 模型）
-    
+
     当禁用时（默认）：
     - 返回实际模型名称（如 deepseek-chat）
     - owned_by 显示实际提供商（如 provider:deepseek）
     """
     now_ts = int(time.time())
     id_to_ref: dict[str, OpenAIModelRef] = {}
-    
+
     # 判断是否启用别名
     if settings.model_alias_enabled:
         # 使用别名模型
@@ -63,7 +63,7 @@ async def list_models() -> OpenAIModelList:
             created=now_ts,
             owned_by=settings.model_alias_owned_by,
         )
-        
+
         # 如果配置为不隐藏 embedding 模型，添加它
         if not settings.hide_embedding_models:
             try:
@@ -84,7 +84,7 @@ async def list_models() -> OpenAIModelList:
             created=now_ts,
             owned_by=f"provider:{settings.llm_provider}",
         )
-        
+
         try:
             embedding_id = settings.embedding_model
             if embedding_id and embedding_id not in id_to_ref:
@@ -95,7 +95,7 @@ async def list_models() -> OpenAIModelList:
                 )
         except Exception:
             pass
-    
+
     return OpenAIModelList(data=list(id_to_ref.values()))
 
 @router.post("/chat/completions", response_model=None)
@@ -115,7 +115,7 @@ async def chat_completions(
     # 模型别名映射（支持接受别名请求）
     actual_model = settings.llm_model_name  # 实际使用的模型
     requested_model = request.model  # 用户请求的模型
-    
+
     if settings.model_alias_enabled:
         if requested_model == settings.model_alias_name:
             logger.info(

@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     milvus_port: int = Field(default=19530, description="Milvus 端口")
     milvus_user: str = Field(default="root", description="Milvus 用户名")
     milvus_password: str = Field(default="", description="Milvus 密码")
+    milvus_database: str = Field(default="default", description="Milvus 数据库名称")
 
     milvus_knowledge_collection: str = Field(
         default="knowledge_base", description="知识库 Collection 名称"
