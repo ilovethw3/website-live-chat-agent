@@ -12,6 +12,7 @@ alwaysApply: true
 ## 技术栈
 - GitHub Actions 自动构建和发布
 - 使用 GitHub 作为代码托管平台
+- 使用gh 进行github的管理
 
 
 ## 代码风格
