@@ -1,7 +1,7 @@
 """
 LLM 模型工厂
 
-根据配置返回对应的 LLM 实例（DeepSeek/OpenAI/Claude）。
+根据配置返回对应的 LLM 实例（支持插件化架构）。
 """
 
 import logging
@@ -12,6 +12,7 @@ from langchain_openai import ChatOpenAI
 
 from src.core.config import settings
 from src.core.exceptions import ConfigurationError
+from src.services.providers import create_provider
 
 logger = logging.getLogger(__name__)
 
@@ -31,17 +32,48 @@ def create_llm() -> BaseChatModel:
     provider = settings.llm_provider
 
     try:
-        if provider == "deepseek":
-            return _create_deepseek_llm()
-        elif provider == "openai":
-            return _create_openai_llm()
+        # 使用插件化架构
+        if provider in ["openai", "deepseek", "siliconflow"]:
+            return _create_plugin_llm(provider)
         elif provider == "anthropic":
+            # Anthropic 暂时保持原有实现
             return _create_anthropic_llm()
         else:
             raise ConfigurationError(f"Unsupported LLM provider: {provider}")
     except Exception as e:
         logger.error(f"Failed to create LLM: {e}")
         raise
+
+
+def _create_plugin_llm(provider: str) -> BaseChatModel:
+    """
+    使用插件化架构创建 LLM 实例
+
+    Args:
+        provider: 提供商名称
+
+    Returns:
+        BaseChatModel 实例
+    """
+    # 构建配置
+    config = {
+        "api_key": settings.llm_api_key,
+        "model": settings.llm_model_name,
+        "temperature": settings.llm_temperature,
+        "max_tokens": settings.llm_max_tokens,
+    }
+
+    # 添加 Base URL（如果需要）
+    base_url = settings.llm_base_url
+    if base_url:
+        config["base_url"] = base_url
+
+    # 创建提供商实例
+    provider_name = f"{provider}_llm"
+    provider_instance = create_provider(provider_name, config)
+
+    # 创建 LLM 实例
+    return provider_instance.create_llm()
 
 
 def _create_deepseek_llm() -> ChatOpenAI:
@@ -120,17 +152,46 @@ def create_embeddings() -> Any:
     provider = settings.embedding_provider
 
     try:
-        if provider == "deepseek":
-            return _create_deepseek_embeddings()
-        elif provider == "openai":
-            return _create_openai_embeddings()
+        # 使用插件化架构
+        if provider in ["openai", "deepseek", "siliconflow"]:
+            return _create_plugin_embeddings(provider)
         elif provider == "local":
+            # 本地模型暂时保持原有实现
             return _create_local_embeddings()
         else:
             raise ConfigurationError(f"Unsupported embedding provider: {provider}")
     except Exception as e:
         logger.error(f"Failed to create embeddings: {e}")
         raise
+
+
+def _create_plugin_embeddings(provider: str) -> Any:
+    """
+    使用插件化架构创建 Embeddings 实例
+
+    Args:
+        provider: 提供商名称
+
+    Returns:
+        Embeddings 实例
+    """
+    # 构建配置
+    config = {
+        "api_key": settings.embedding_api_key,
+        "model": settings.embedding_model_name,
+    }
+
+    # 添加 Base URL（如果需要）
+    base_url = settings.embedding_base_url
+    if base_url:
+        config["base_url"] = base_url
+
+    # 创建提供商实例
+    provider_name = f"{provider}_embedding"
+    provider_instance = create_provider(provider_name, config)
+
+    # 创建 Embeddings 实例
+    return provider_instance.create_embeddings()
 
 
 def _create_deepseek_embeddings() -> Any:

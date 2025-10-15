@@ -39,6 +39,11 @@ async def list_models() -> OpenAIModelList:
     """
     OpenAI 兼容的模型列表端点 (/v1/models)。
 
+    支持混合模型组合：
+    - LLM 和 Embedding 可以来自不同提供商
+    - 支持模型别名功能
+    - 支持硅基流动平台等新提供商
+
     ⚠️ 当启用模型别名功能时（MODEL_ALIAS_ENABLED=true）：
     - 返回配置的别名模型（如 gpt-4o-mini）
     - owned_by 字段为配置的值（如 openai）
@@ -67,7 +72,7 @@ async def list_models() -> OpenAIModelList:
         # 如果配置为不隐藏 embedding 模型，添加它
         if not settings.hide_embedding_models:
             try:
-                embedding_id = settings.embedding_model
+                embedding_id = settings.embedding_model_name
                 if embedding_id and embedding_id not in id_to_ref:
                     id_to_ref[embedding_id] = OpenAIModelRef(
                         id=embedding_id,
@@ -77,7 +82,7 @@ async def list_models() -> OpenAIModelList:
             except Exception:
                 pass
     else:
-        # 返回实际模型名（原有逻辑）
+        # 返回实际模型名（支持混合模型组合）
         chat_model_id = settings.llm_model_name
         id_to_ref[chat_model_id] = OpenAIModelRef(
             id=chat_model_id,
@@ -85,16 +90,18 @@ async def list_models() -> OpenAIModelList:
             owned_by=f"provider:{settings.llm_provider}",
         )
 
-        try:
-            embedding_id = settings.embedding_model
-            if embedding_id and embedding_id not in id_to_ref:
-                id_to_ref[embedding_id] = OpenAIModelRef(
-                    id=embedding_id,
-                    created=now_ts,
-                    owned_by=f"provider:{settings.embedding_provider}",
-                )
-        except Exception:
-            pass
+        # 添加 Embedding 模型（如果配置显示）
+        if not settings.hide_embedding_models:
+            try:
+                embedding_id = settings.embedding_model_name
+                if embedding_id and embedding_id not in id_to_ref:
+                    id_to_ref[embedding_id] = OpenAIModelRef(
+                        id=embedding_id,
+                        created=now_ts,
+                        owned_by=f"provider:{settings.embedding_provider}",
+                    )
+            except Exception:
+                pass
 
     return OpenAIModelList(data=list(id_to_ref.values()))
 

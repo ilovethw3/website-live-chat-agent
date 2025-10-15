@@ -3,13 +3,21 @@ info:
   title: Website Live Chat Agent API
   version: 0.1.0
   description: |
-    基于 LangGraph + Milvus + DeepSeek 的智能客服 Agent API。
+    基于 LangGraph + Milvus + 插件化模型提供商的智能客服 Agent API。
     
     **核心特性**:
     - ✅ OpenAI Chat Completion API 完全兼容
+    - ✅ 插件化模型提供商架构（支持OpenAI、DeepSeek、硅基流动等）
+    - ✅ 模型配置分离（LLM和Embedding可独立选择不同提供商）
+    - ✅ 混合模型组合支持（如DeepSeek LLM + OpenAI Embedding）
     - ✅ RAG 知识库检索（从 Milvus 检索网站内容）
     - ✅ 流式响应支持（SSE）
     - ✅ 会话状态持久化（LangGraph Checkpointer）
+    
+    **支持的模型提供商**:
+    - **OpenAI**: gpt-4o-mini, gpt-4o, text-embedding-3-small
+    - **DeepSeek**: deepseek-chat, deepseek-coder, deepseek-embedding
+    - **硅基流动**: Qwen/Qwen2.5系列, BAAI/bge系列
     
     **WordPress 集成**:
     WordPress 插件只需修改 Base URL 为 `http://your-server:8000/v1` 即可使用。
@@ -39,6 +47,8 @@ tags:
     description: 会话管理
   - name: Health
     description: 健康检查
+  - name: Configuration
+    description: 配置管理
 
 security:
   - ApiKeyAuth: []
@@ -445,6 +455,141 @@ paths:
                   redis:
                     status: healthy
                 timestamp: 1699999999
+
+  # ==================== 配置管理 ====================
+  /api/v1/config/validate:
+    get:
+      summary: 验证配置
+      description: |
+        验证当前模型配置的有效性，支持插件化架构和混合模型组合。
+        
+        检查项目：
+        - LLM 提供商配置和连接
+        - Embedding 提供商配置和连接
+        - 混合模型组合兼容性
+      operationId: validateConfiguration
+      tags:
+        - Configuration
+      responses:
+        '200':
+          description: 配置验证结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  llm_valid:
+                    type: boolean
+                    description: LLM配置是否有效
+                    example: true
+                  embedding_valid:
+                    type: boolean
+                    description: Embedding配置是否有效
+                    example: true
+                  llm_error:
+                    type: string
+                    description: LLM配置错误信息（如果有）
+                    example: null
+                  embedding_error:
+                    type: string
+                    description: Embedding配置错误信息（如果有）
+                    example: null
+                  llm_provider:
+                    type: string
+                    description: 当前LLM提供商
+                    example: "deepseek"
+                  embedding_provider:
+                    type: string
+                    description: 当前Embedding提供商
+                    example: "openai"
+                  llm_model:
+                    type: string
+                    description: 当前LLM模型
+                    example: "deepseek-chat"
+                  embedding_model:
+                    type: string
+                    description: 当前Embedding模型
+                    example: "text-embedding-3-small"
+                  mixed_models:
+                    type: boolean
+                    description: 是否使用混合模型组合
+                    example: true
+              example:
+                llm_valid: true
+                embedding_valid: true
+                llm_error: null
+                embedding_error: null
+                llm_provider: "deepseek"
+                embedding_provider: "openai"
+                llm_model: "deepseek-chat"
+                embedding_model: "text-embedding-3-small"
+                mixed_models: true
+        '500':
+          description: 配置验证失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  message: "Configuration validation failed"
+                  type: "ConfigurationError"
+                  code: "CONFIG_VALIDATION_FAILED"
+
+  /api/v1/config/migrate:
+    post:
+      summary: 执行配置迁移
+      description: |
+        从旧配置迁移到插件化架构。
+        
+        迁移功能：
+        - 自动检测旧配置格式
+        - 转换为插件化架构
+        - 验证迁移结果
+        - 生成迁移报告
+      operationId: migrateConfiguration
+      tags:
+        - Configuration
+      responses:
+        '200':
+          description: 迁移成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  changes:
+                    type: array
+                    items:
+                      type: string
+                    example: ["LLM配置已迁移到插件化架构", "Embedding配置已迁移到插件化架构"]
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+                    example: []
+                  new_config:
+                    type: object
+                    description: 新的配置项
+              example:
+                success: true
+                changes: ["LLM配置已迁移到插件化架构", "Embedding配置已迁移到插件化架构"]
+                warnings: []
+                new_config: {}
+        '500':
+          description: 迁移失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  message: "Migration failed"
+                  type: "MigrationError"
+                  code: "MIGRATION_FAILED"
 
 # ==================== 组件定义 ====================
 components:

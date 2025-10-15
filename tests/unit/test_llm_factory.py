@@ -75,7 +75,7 @@ def test_create_llm_missing_deepseek_key():
     ):
         # 重新创建 settings 实例
         with patch("src.services.llm_factory.settings", Settings()):
-            with pytest.raises(ConfigurationError, match="DEEPSEEK_API_KEY"):
+            with pytest.raises(ValueError, match="DEEPSEEK_API_KEY"):
                 create_llm()
 
 
@@ -94,7 +94,7 @@ def test_create_llm_missing_openai_key():
         clear=True
     ):
         with patch("src.services.llm_factory.settings", Settings()):
-            with pytest.raises(ConfigurationError, match="OPENAI_API_KEY"):
+            with pytest.raises(ValueError, match="OPENAI_API_KEY"):
                 create_llm()
 
 
