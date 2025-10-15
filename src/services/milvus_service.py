@@ -192,11 +192,8 @@ class MilvusService:
             index_params=index_params,
         )
 
-        # session_id 标量索引（加速按会话查询）
-        self.history_collection.create_index(
-            field_name="session_id",
-            index_params={"index_type": "STL_SORT"},
-        )
+        # 注意：STL_SORT索引只支持数值字段，VARCHAR字段使用默认索引即可
+        # session_id字段为VARCHAR类型，不需要创建特殊索引
 
         self.history_collection.load()
         logger.info(f"✅ Created and loaded collection: {collection_name}")
