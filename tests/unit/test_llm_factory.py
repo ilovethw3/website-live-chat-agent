@@ -13,6 +13,15 @@ from src.core.exceptions import ConfigurationError
 from src.services.llm_factory import create_llm
 
 
+def get_base_test_env() -> dict:
+    """获取测试所需的基础环境变量"""
+    return {
+        "MILVUS_HOST": "localhost",
+        "REDIS_HOST": "localhost",
+        "API_KEY": "test-api-key",
+    }
+
+
 def test_create_llm_deepseek():
     """测试创建 DeepSeek LLM"""
     with patch.dict(
@@ -132,11 +141,13 @@ class TestEmbeddingFactory:
         """测试使用独立URL创建embeddings"""
         from src.services.llm_factory import create_embeddings
 
-        with patch.dict(os.environ, {
+        env = get_base_test_env()
+        env.update({
             "EMBEDDING_PROVIDER": "deepseek",
             "DEEPSEEK_API_KEY": "test-key",
             "EMBEDDING_BASE_URL": "https://independent-embedding.com/v1"
-        }, clear=True):
+        })
+        with patch.dict(os.environ, env, clear=True):
             embeddings = create_embeddings()
             assert embeddings is not None
             assert hasattr(embeddings, "embed_query")
@@ -145,12 +156,14 @@ class TestEmbeddingFactory:
         """测试使用提供商特定URL创建embeddings"""
         from src.services.llm_factory import create_embeddings
 
-        with patch.dict(os.environ, {
+        env = get_base_test_env()
+        env.update({
             "EMBEDDING_PROVIDER": "deepseek",
             "DEEPSEEK_API_KEY": "test-key",
             "EMBEDDING_BASE_URL": "",
             "DEEPSEEK_EMBEDDING_BASE_URL": "https://embedding.deepseek.com/v1"
-        }, clear=True):
+        })
+        with patch.dict(os.environ, env, clear=True):
             embeddings = create_embeddings()
             assert embeddings is not None
             assert hasattr(embeddings, "embed_query")
@@ -159,13 +172,15 @@ class TestEmbeddingFactory:
         """测试使用共享URL创建embeddings"""
         from src.services.llm_factory import create_embeddings
 
-        with patch.dict(os.environ, {
+        env = get_base_test_env()
+        env.update({
             "EMBEDDING_PROVIDER": "deepseek",
             "DEEPSEEK_API_KEY": "test-key",
             "EMBEDDING_BASE_URL": "",
             "DEEPSEEK_EMBEDDING_BASE_URL": "",
             "DEEPSEEK_BASE_URL": "https://api.deepseek.com/v1"
-        }, clear=True):
+        })
+        with patch.dict(os.environ, env, clear=True):
             embeddings = create_embeddings()
             assert embeddings is not None
             assert hasattr(embeddings, "embed_query")
@@ -174,12 +189,14 @@ class TestEmbeddingFactory:
         """测试不使用URL创建embeddings（使用默认URL）"""
         from src.services.llm_factory import create_embeddings
 
-        with patch.dict(os.environ, {
+        env = get_base_test_env()
+        env.update({
             "EMBEDDING_PROVIDER": "openai",
             "OPENAI_API_KEY": "test-key",
             "EMBEDDING_BASE_URL": "",
             "OPENAI_EMBEDDING_BASE_URL": ""
-        }, clear=True):
+        })
+        with patch.dict(os.environ, env, clear=True):
             embeddings = create_embeddings()
             assert embeddings is not None
             assert hasattr(embeddings, "embed_query")
@@ -188,11 +205,13 @@ class TestEmbeddingFactory:
         """测试OpenAI provider的embeddings创建"""
         from src.services.llm_factory import create_embeddings
 
-        with patch.dict(os.environ, {
+        env = get_base_test_env()
+        env.update({
             "EMBEDDING_PROVIDER": "openai",
             "OPENAI_API_KEY": "test-key",
             "EMBEDDING_BASE_URL": "https://api.openai.com/v1"
-        }, clear=True):
+        })
+        with patch.dict(os.environ, env, clear=True):
             embeddings = create_embeddings()
             assert embeddings is not None
             assert hasattr(embeddings, "embed_query")
@@ -201,11 +220,13 @@ class TestEmbeddingFactory:
         """测试SiliconFlow provider的embeddings创建"""
         from src.services.llm_factory import create_embeddings
 
-        with patch.dict(os.environ, {
+        env = get_base_test_env()
+        env.update({
             "EMBEDDING_PROVIDER": "siliconflow",
             "SILICONFLOW_API_KEY": "test-key",
             "EMBEDDING_BASE_URL": "https://embedding.siliconflow.cn/v1"
-        }, clear=True):
+        })
+        with patch.dict(os.environ, env, clear=True):
             embeddings = create_embeddings()
             assert embeddings is not None
             assert hasattr(embeddings, "embed_query")
@@ -214,11 +235,13 @@ class TestEmbeddingFactory:
         """测试Anthropic provider的embeddings创建"""
         from src.services.llm_factory import create_embeddings
 
-        with patch.dict(os.environ, {
+        env = get_base_test_env()
+        env.update({
             "EMBEDDING_PROVIDER": "anthropic",
             "ANTHROPIC_API_KEY": "test-key",
             "EMBEDDING_BASE_URL": "https://api.anthropic.com/v1"
-        }, clear=True):
+        })
+        with patch.dict(os.environ, env, clear=True):
             embeddings = create_embeddings()
             assert embeddings is not None
             assert hasattr(embeddings, "embed_query")
@@ -227,10 +250,12 @@ class TestEmbeddingFactory:
         """测试本地provider的embeddings创建"""
         from src.services.llm_factory import create_embeddings
 
-        with patch.dict(os.environ, {
+        env = get_base_test_env()
+        env.update({
             "EMBEDDING_PROVIDER": "local",
             "EMBEDDING_BASE_URL": ""
-        }, clear=True):
+        })
+        with patch.dict(os.environ, env, clear=True):
             embeddings = create_embeddings()
             assert embeddings is not None
             assert hasattr(embeddings, "embed_query")
@@ -240,21 +265,24 @@ class TestEmbeddingFactory:
         from src.services.llm_factory import create_embeddings
 
         # 测试独立URL优先级
-        with patch.dict(os.environ, {
+        env = get_base_test_env()
+        env.update({
             "EMBEDDING_PROVIDER": "deepseek",
             "DEEPSEEK_API_KEY": "test-key",
             "EMBEDDING_BASE_URL": "https://independent.com/v1",
             "DEEPSEEK_EMBEDDING_BASE_URL": "https://embedding.deepseek.com/v1",
             "DEEPSEEK_BASE_URL": "https://api.deepseek.com/v1"
-        }, clear=True):
+        })
+        with patch.dict(os.environ, env, clear=True):
             embeddings = create_embeddings()
             assert embeddings is not None
             # 应该使用独立URL（最高优先级）
 
     def test_create_embeddings_invalid_provider(self):
         """测试无效的embedding provider"""
-        from src.core.config import Settings
         from pydantic import ValidationError
+
+        from src.core.config import Settings
 
         # Pydantic会在Settings初始化时验证provider字段
         with patch.dict(os.environ, {
@@ -268,11 +296,13 @@ class TestEmbeddingFactory:
         """测试插件化架构的embeddings创建"""
         from src.services.llm_factory import _create_plugin_embeddings
 
-        with patch.dict(os.environ, {
+        env = get_base_test_env()
+        env.update({
             "EMBEDDING_PROVIDER": "deepseek",
             "DEEPSEEK_API_KEY": "test-key",
             "EMBEDDING_BASE_URL": "https://plugin-embedding.com/v1"
-        }, clear=True):
+        })
+        with patch.dict(os.environ, env, clear=True):
             embeddings = _create_plugin_embeddings("deepseek")
             assert embeddings is not None
             assert hasattr(embeddings, "embed_query")
@@ -295,7 +325,8 @@ class TestEmbeddingFactory:
         """测试复杂配置场景"""
         from src.services.llm_factory import create_embeddings
 
-        with patch.dict(os.environ, {
+        env = get_base_test_env()
+        env.update({
             "EMBEDDING_PROVIDER": "deepseek",
             "DEEPSEEK_API_KEY": "test-key",
             "EMBEDDING_BASE_URL": "https://global-embedding.com/v1",
@@ -305,7 +336,8 @@ class TestEmbeddingFactory:
             "ANTHROPIC_EMBEDDING_BASE_URL": "https://api.anthropic.com/v1",
             "DEEPSEEK_BASE_URL": "https://api.deepseek.com/v1",
             "SILICONFLOW_BASE_URL": "https://api.siliconflow.cn/v1"
-        }, clear=True):
+        })
+        with patch.dict(os.environ, env, clear=True):
             embeddings = create_embeddings()
             assert embeddings is not None
             assert hasattr(embeddings, "embed_query")
@@ -314,12 +346,14 @@ class TestEmbeddingFactory:
         """测试向后兼容性"""
         from src.services.llm_factory import create_embeddings
 
-        with patch.dict(os.environ, {
+        env = get_base_test_env()
+        env.update({
             "EMBEDDING_PROVIDER": "deepseek",
             "DEEPSEEK_API_KEY": "test-key",
             "DEEPSEEK_BASE_URL": "https://api.deepseek.com/v1"
             # 不设置新的独立URL配置
-        }, clear=True):
+        })
+        with patch.dict(os.environ, env, clear=True):
             embeddings = create_embeddings()
             assert embeddings is not None
             assert hasattr(embeddings, "embed_query")
@@ -331,11 +365,13 @@ class TestEmbeddingFactory:
         providers = ["openai", "deepseek", "siliconflow", "anthropic", "local"]
 
         for provider in providers:
-            with patch.dict(os.environ, {
+            env = get_base_test_env()
+            env.update({
                 "EMBEDDING_PROVIDER": provider,
                 f"{provider.upper()}_API_KEY": "test-key",
                 "EMBEDDING_BASE_URL": f"https://{provider}-embedding.com/v1"
-            }, clear=True):
+            })
+            with patch.dict(os.environ, env, clear=True):
                 embeddings = create_embeddings()
                 assert embeddings is not None
                 assert hasattr(embeddings, "embed_query")

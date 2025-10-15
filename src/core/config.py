@@ -19,6 +19,26 @@ class Settings(BaseSettings):
         default="deepseek", description="LLM 提供商"
     )
 
+    # ===== LLM URL 配置 =====
+    # 通用独立URL配置（最高优先级）
+    llm_base_url_field: str | None = Field(
+        default=None, description="独立LLM Base URL（优先级最高）"
+    )
+
+    # 提供商特定URL配置
+    openai_llm_base_url: str | None = Field(
+        default=None, description="OpenAI LLM Base URL"
+    )
+    deepseek_llm_base_url: str | None = Field(
+        default=None, description="DeepSeek LLM Base URL"
+    )
+    siliconflow_llm_base_url: str | None = Field(
+        default=None, description="SiliconFlow LLM Base URL"
+    )
+    anthropic_llm_base_url: str | None = Field(
+        default=None, description="Anthropic LLM Base URL"
+    )
+
     # DeepSeek 配置
     deepseek_api_key: str | None = Field(default=None, description="DeepSeek API Key")
     deepseek_base_url: str = Field(
@@ -74,6 +94,26 @@ class Settings(BaseSettings):
         default="deepseek-embedding", description="Embedding 模型名称"
     )
     embedding_dim: int = Field(default=1536, description="Embedding 维度")
+
+    # ===== Embedding API Key 配置 =====
+    # 通用独立API Key配置（最高优先级）
+    embedding_api_key_field: str | None = Field(
+        default=None, description="独立Embedding API Key（优先级最高）"
+    )
+
+    # 提供商特定API Key配置
+    openai_embedding_api_key: str | None = Field(
+        default=None, description="OpenAI Embedding API Key"
+    )
+    deepseek_embedding_api_key: str | None = Field(
+        default=None, description="DeepSeek Embedding API Key"
+    )
+    siliconflow_embedding_api_key: str | None = Field(
+        default=None, description="SiliconFlow Embedding API Key"
+    )
+    anthropic_embedding_api_key: str | None = Field(
+        default=None, description="Anthropic Embedding API Key"
+    )
 
     # ===== Embedding URL 配置 =====
     # 通用独立URL配置（最高优先级）
@@ -212,35 +252,67 @@ class Settings(BaseSettings):
 
     @property
     def llm_base_url(self) -> str | None:
-        """根据 LLM 提供商返回对应的 Base URL"""
+        """根据 LLM 提供商返回对应的 Base URL（智能优先级）"""
+        # 优先级1: 通用独立URL（最高优先级）
+        if self.llm_base_url_field:
+            return self.llm_base_url_field
+
+        # 优先级2: 提供商特定URL
         if self.llm_provider == "deepseek":
+            if self.deepseek_llm_base_url:
+                return self.deepseek_llm_base_url
             return self.deepseek_base_url
         elif self.llm_provider == "openai":
+            if self.openai_llm_base_url:
+                return self.openai_llm_base_url
             return None  # OpenAI 使用默认 URL
         elif self.llm_provider == "anthropic":
+            if self.anthropic_llm_base_url:
+                return self.anthropic_llm_base_url
             return None  # Anthropic 使用默认 URL
         elif self.llm_provider == "siliconflow":
+            if self.siliconflow_llm_base_url:
+                return self.siliconflow_llm_base_url
             return self.siliconflow_base_url
         else:
             raise ValueError(f"Unsupported LLM provider: {self.llm_provider}")
 
     @property
     def embedding_api_key(self) -> str:
-        """根据 Embedding 提供商返回对应的 API Key"""
+        """根据 Embedding 提供商返回对应的 API Key（智能优先级）"""
+        # 本地模型不需要 API Key
+        if self.embedding_provider == "local":
+            return ""
+
+        # 优先级1: 通用独立API Key（最高优先级）
+        if self.embedding_api_key_field:
+            return self.embedding_api_key_field
+
+        # 优先级2: 提供商特定API Key
         if self.embedding_provider == "deepseek":
+            if self.deepseek_embedding_api_key:
+                return self.deepseek_embedding_api_key
             if not self.deepseek_api_key:
                 raise ValueError("DEEPSEEK_API_KEY is required when EMBEDDING_PROVIDER=deepseek")
             return self.deepseek_api_key
         elif self.embedding_provider == "openai":
+            if self.openai_embedding_api_key:
+                return self.openai_embedding_api_key
             if not self.openai_api_key:
                 raise ValueError("OPENAI_API_KEY is required when EMBEDDING_PROVIDER=openai")
             return self.openai_api_key
-        elif self.embedding_provider == "local":
-            return ""  # 本地模型不需要 API Key
         elif self.embedding_provider == "siliconflow":
+            if self.siliconflow_embedding_api_key:
+                return self.siliconflow_embedding_api_key
             if not self.siliconflow_api_key:
                 raise ValueError("SILICONFLOW_API_KEY is required when EMBEDDING_PROVIDER=siliconflow")
             return self.siliconflow_api_key
+        elif self.embedding_provider == "anthropic":
+            if self.anthropic_embedding_api_key:
+                return self.anthropic_embedding_api_key
+            if not self.anthropic_api_key:
+                raise ValueError("ANTHROPIC_API_KEY is required when EMBEDDING_PROVIDER=anthropic")
+            return self.anthropic_api_key
         else:
             raise ValueError(f"Unsupported embedding provider: {self.embedding_provider}")
 

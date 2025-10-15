@@ -5,6 +5,7 @@
 """
 
 import os
+from unittest.mock import patch
 
 import pytest
 from pydantic import ValidationError
@@ -391,4 +392,99 @@ class TestEmbeddingURLConfiguration:
             assert settings.deepseek_embedding_base_url == "https://embedding.deepseek.com/v1"
             assert settings.siliconflow_embedding_base_url == "https://embedding.siliconflow.cn/v1"
             assert settings.anthropic_embedding_base_url == "https://api.anthropic.com/v1"
+
+
+def test_llm_base_url_priority():
+    """测试 LLM Base URL 优先级配置"""
+    # 测试通用独立URL（最高优先级）
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "deepseek",
+        "LLM_BASE_URL_FIELD": "https://custom-llm-api.com/v1",
+        "DEEPSEEK_API_KEY": "test-key"
+    }, clear=True):
+        settings = Settings()
+        assert settings.llm_base_url == "https://custom-llm-api.com/v1"
+
+    # 测试提供商特定URL（中等优先级）
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "deepseek",
+        "DEEPSEEK_LLM_BASE_URL": "https://custom-deepseek-api.com/v1",
+        "DEEPSEEK_API_KEY": "test-key"
+    }, clear=True):
+        settings = Settings()
+        assert settings.llm_base_url == "https://custom-deepseek-api.com/v1"
+
+    # 测试共享URL（最低优先级）
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "deepseek",
+        "DEEPSEEK_BASE_URL": "https://api.deepseek.com/v1",
+        "DEEPSEEK_API_KEY": "test-key"
+    }, clear=True):
+        settings = Settings()
+        assert settings.llm_base_url == "https://api.deepseek.com/v1"
+
+
+def test_llm_base_url_provider_specific():
+    """测试不同提供商的LLM Base URL配置"""
+    # 测试OpenAI
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "openai",
+        "OPENAI_LLM_BASE_URL": "https://custom-openai-api.com/v1",
+        "OPENAI_API_KEY": "test-key"
+    }, clear=True):
+        settings = Settings()
+        assert settings.llm_base_url == "https://custom-openai-api.com/v1"
+
+    # 测试SiliconFlow
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "siliconflow",
+        "SILICONFLOW_LLM_BASE_URL": "https://custom-siliconflow-api.com/v1",
+        "SILICONFLOW_API_KEY": "test-key"
+    }, clear=True):
+        settings = Settings()
+        assert settings.llm_base_url == "https://custom-siliconflow-api.com/v1"
+
+    # 测试Anthropic
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "anthropic",
+        "ANTHROPIC_LLM_BASE_URL": "https://custom-anthropic-api.com/v1",
+        "ANTHROPIC_API_KEY": "test-key"
+    }, clear=True):
+        settings = Settings()
+        assert settings.llm_base_url == "https://custom-anthropic-api.com/v1"
+
+
+def test_llm_base_url_backward_compatibility():
+    """测试LLM Base URL向后兼容性"""
+    # 测试DeepSeek默认配置
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "deepseek",
+        "DEEPSEEK_API_KEY": "test-key"
+    }, clear=True):
+        settings = Settings()
+        assert settings.llm_base_url == "https://api.deepseek.com/v1"
+
+    # 测试SiliconFlow默认配置
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "siliconflow",
+        "SILICONFLOW_API_KEY": "test-key"
+    }, clear=True):
+        settings = Settings()
+        assert settings.llm_base_url == "https://api.siliconflow.cn/v1"
+
+    # 测试OpenAI默认配置（返回None）
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "openai",
+        "OPENAI_API_KEY": "test-key"
+    }, clear=True):
+        settings = Settings()
+        assert settings.llm_base_url is None
+
+    # 测试Anthropic默认配置（返回None）
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "anthropic",
+        "ANTHROPIC_API_KEY": "test-key"
+    }, clear=True):
+        settings = Settings()
+        assert settings.llm_base_url is None
 
