@@ -1,7 +1,0 @@
----
-description: 文档规范
-globs: 
-alwaysApply: true
----
-**本项目的文档体系严格遵守组织制定的《项目文档架构与使用规范》**。
-[查看最新版本规范](https://raw.githubusercontent.com/ilovethw3/website-live-chat-agent/refs/heads/main/documentation-architecture-spec.md)

@@ -12,7 +12,7 @@ alwaysApply: true
 ## 技术栈
 - GitHub Actions 自动构建和发布
 - 使用 GitHub 作为代码托管平台
-- 使用gh进行与GitHub的操作
+- 使用gh 进行github的管理
 
 
 ## 代码风格
@@ -39,5 +39,4 @@ alwaysApply: true
 本项目使用以下规则文件：
 - general.mdc：通用规范（本文件）
 - python.mdc：Python开发规范
-- document.mdc：文档规范
 - git.mdc：Git提交规范

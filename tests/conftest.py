@@ -32,6 +32,9 @@ os.environ.update({
     "REDIS_DB": "0",
     "API_KEY": "test-api-key-12345",
     "LOG_LEVEL": "ERROR",  # 减少测试时的日志输出
+    "EMBEDDING_PROVIDER": "siliconflow",  # 默认使用siliconflow
+    "SILICONFLOW_API_KEY": "test-siliconflow-key",  # 添加siliconflow API key
+    "SILICONFLOW_EMBEDDING_BASE_URL": "https://api.siliconflow.cn/v1/embeddings",  # 添加默认URL
     "EMBEDDING_MODEL": "text-embedding-ada-002",
     "EMBEDDING_DIM": "1536",
     "LANGGRAPH_CHECKPOINTER": "memory",
