@@ -448,6 +448,9 @@ async def _stream_response(
         )
         yield f"data: {first_chunk.model_dump_json()}\n\n"
 
+        # 导入AIMessage类到函数作用域
+        from langchain_core.messages import AIMessage
+
         # 流式执行 Agent
         async for chunk in app.astream(initial_state, config):
             # 检查是否有新的 AI 消息
@@ -461,7 +464,6 @@ async def _stream_response(
                     # 如果llm_output是字符串，可能是错误信息或直接内容
                     logger.warning(f"⚠️ LLM output is string: {llm_output}")
                     # 创建一个临时的AI消息
-                    from langchain_core.messages import AIMessage
                     messages = [AIMessage(content=llm_output)]
                 else:
                     logger.error(f"❌ Unexpected llm_output type: {type(llm_output)}")
