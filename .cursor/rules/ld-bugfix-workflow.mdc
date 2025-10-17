@@ -157,7 +157,9 @@ gh pr create --title "fix: 简短描述" --body "
 
 ## 相关 Issue
 Fixes #123
-" --assignee "@me"
+
+@codex review
+"
 ```
 
 ### 4. 请求 AR 审查（关键！）

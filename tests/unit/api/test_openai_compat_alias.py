@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from langchain_core.messages import AIMessage
 
 from src.core.config import settings
 from src.main import app
@@ -98,7 +99,7 @@ class TestModelAlias:
             # 应该有两个模型（聊天模型 + embedding模型）
             assert len(model_ids) >= 2
             assert settings.model_alias_name in model_ids
-            assert settings.embedding_model in model_ids
+            assert settings.embedding_model_name in model_ids
 
     def test_chat_completions_with_alias(self, client):
         """测试使用别名发起聊天请求"""
@@ -183,6 +184,113 @@ class TestModelAlias:
                 assert response.status_code == 200
                 data = response.json()
                 assert data["model"] == settings.llm_model_name
+
+    def test_list_models_embedding_with_different_providers(self, client):
+        """测试不同provider的embedding模型显示"""
+        # 测试deepseek provider
+        with patch.object(settings, 'model_alias_enabled', True), \
+             patch.object(settings, 'hide_embedding_models', False), \
+             patch.object(settings, 'embedding_provider', 'deepseek'), \
+             patch.object(settings, 'embedding_model', 'deepseek-embedding'):
+
+            response = client.get(
+                "/v1/models",
+                headers={"Authorization": f"Bearer {settings.api_key}"}
+            )
+
+            data = response.json()
+            model_ids = [m["id"] for m in data["data"]]
+            
+            # 应该包含deepseek embedding模型
+            assert settings.embedding_model in model_ids
+
+    def test_list_models_hide_embedding_models(self, client):
+        """测试隐藏embedding模型的情况"""
+        with patch.object(settings, 'model_alias_enabled', True), \
+             patch.object(settings, 'hide_embedding_models', True):
+
+            response = client.get(
+                "/v1/models",
+                headers={"Authorization": f"Bearer {settings.api_key}"}
+            )
+
+            data = response.json()
+            model_ids = [m["id"] for m in data["data"]]
+            
+            # 应该只有聊天模型，没有embedding模型
+            assert len(model_ids) == 1
+            assert settings.model_alias_name in model_ids
+            assert settings.embedding_model_name not in model_ids
+
+    def test_list_models_without_alias(self, client):
+        """测试不使用别名的情况"""
+        with patch.object(settings, 'model_alias_enabled', False), \
+             patch.object(settings, 'hide_embedding_models', False):
+
+            response = client.get(
+                "/v1/models",
+                headers={"Authorization": f"Bearer {settings.api_key}"}
+            )
+
+            data = response.json()
+            model_ids = [m["id"] for m in data["data"]]
+            
+            # 应该显示实际模型名
+            assert settings.llm_model_name in model_ids
+            assert settings.embedding_model_name in model_ids
+
+    def test_chat_completions_streaming_response(self, client):
+        """测试流式响应"""
+        with patch.object(settings, 'model_alias_enabled', True):
+            # 模拟Agent响应
+            mock_agent = AsyncMock()
+            mock_agent.astream.return_value = [
+                {"llm": {"messages": [AIMessage(content="流式测试回复")]}}
+            ]
+            
+            with patch('src.agent.graph.get_agent_app', return_value=mock_agent):
+                response = client.post(
+                    "/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": settings.model_alias_name,
+                        "messages": [{"role": "user", "content": "测试流式响应"}],
+                        "stream": True
+                    }
+                )
+
+                # 流式响应应该返回200
+                assert response.status_code == 200
+                assert "text/event-stream" in response.headers.get("content-type", "")
+
+    def test_chat_completions_error_handling(self, client):
+        """测试错误处理"""
+        with patch.object(settings, 'model_alias_enabled', True):
+            # 模拟Agent抛出异常
+            mock_agent = AsyncMock()
+            mock_agent.ainvoke.side_effect = Exception("测试错误")
+            
+            with patch('src.agent.graph.get_agent_app', return_value=mock_agent):
+                response = client.post(
+                    "/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": settings.model_alias_name,
+                        "messages": [{"role": "user", "content": "测试错误处理"}],
+                        "stream": False
+                    }
+                )
+
+                # 应该返回错误响应
+                assert response.status_code == 200
+                data = response.json()
+                assert "抱歉，系统遇到了一些问题" in data["choices"][0]["message"]["content"]
 
 
 if __name__ == "__main__":

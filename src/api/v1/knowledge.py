@@ -44,20 +44,29 @@ async def upsert_knowledge(request: KnowledgeUpsertRequest) -> KnowledgeUpsertRe
         documents_to_insert = []
 
         for doc in request.documents:
-            # 生成文档 ID
-            doc_id = str(uuid.uuid4())
+            # 检查文本长度并分块
+            from src.core.utils import chunk_text_for_embedding
+            chunks = chunk_text_for_embedding(doc.text, max_tokens=512)
 
-            # 生成 Embedding
-            embedding = await embeddings.aembed_query(doc.text)
+            if len(chunks) > 1:
+                logger.info(f"Document split into {len(chunks)} chunks")
 
-            documents_to_insert.append(
-                {
+            for idx, chunk in enumerate(chunks):
+                doc_id = str(uuid.uuid4())
+                embedding = await embeddings.aembed_query(chunk)
+
+                # 更新metadata，标记分块信息
+                chunk_metadata = doc.metadata.copy() if doc.metadata else {}
+                if len(chunks) > 1:
+                    chunk_metadata["chunk_index"] = idx
+                    chunk_metadata["total_chunks"] = len(chunks)
+
+                documents_to_insert.append({
                     "id": doc_id,
-                    "text": doc.text,
+                    "text": chunk,
                     "embedding": embedding,
-                    "metadata": doc.metadata,
-                }
-            )
+                    "metadata": chunk_metadata,
+                })
 
         # 批量插入到 Milvus（兼容不同服务实现/测试桩）
         inserted_count: int = 0

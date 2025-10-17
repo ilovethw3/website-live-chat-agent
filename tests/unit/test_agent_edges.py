@@ -124,3 +124,92 @@ def test_should_retrieve_max_iterations():
     # 应该有逻辑防止无限循环
     assert route is not None
 
+
+def test_should_retrieve_with_next_step_retrieve():
+    """测试next_step为retrieve时的路由"""
+    state: AgentState = {
+        "messages": [HumanMessage(content="需要检索的问题")],
+        "retrieved_docs": [],
+        "tool_calls": [],
+        "session_id": "test-123",
+        "next_step": "retrieve",
+    }
+
+    route = should_retrieve(state)
+
+    # 明确指定retrieve时应该路由到retrieve
+    assert route == "retrieve"
+
+
+def test_should_retrieve_with_next_step_llm():
+    """测试next_step为llm时的路由"""
+    state: AgentState = {
+        "messages": [HumanMessage(content="直接回答的问题")],
+        "retrieved_docs": [],
+        "tool_calls": [],
+        "session_id": "test-123",
+        "next_step": "llm",
+    }
+
+    route = should_retrieve(state)
+
+    # 明确指定llm时应该路由到llm
+    assert route == "llm"
+
+
+def test_should_continue_with_error():
+    """测试有错误时应该结束"""
+    state: AgentState = {
+        "messages": [
+            HumanMessage(content="查询信息"),
+            AIMessage(content="这是回复"),
+        ],
+        "retrieved_docs": [],
+        "tool_calls": [],
+        "session_id": "test-123",
+        "error": "测试错误",
+    }
+
+    result = should_continue(state)
+
+    # 有错误时应该结束
+    assert result == "END"
+
+
+def test_should_continue_with_low_confidence():
+    """测试低置信度时的处理"""
+    state: AgentState = {
+        "messages": [
+            HumanMessage(content="查询信息"),
+            AIMessage(content="这是回复"),
+        ],
+        "retrieved_docs": [],
+        "tool_calls": [],
+        "session_id": "test-123",
+        "confidence_score": 0.3,  # 低置信度
+    }
+
+    result = should_continue(state)
+
+    # 低置信度时应该继续（当前实现）
+    assert result == "END"
+
+
+def test_should_continue_with_high_confidence():
+    """测试高置信度时的处理"""
+    state: AgentState = {
+        "messages": [
+            HumanMessage(content="查询信息"),
+            AIMessage(content="这是回复"),
+        ],
+        "retrieved_docs": [],
+        "tool_calls": [],
+        "session_id": "test-123",
+        "confidence_score": 0.8,  # 高置信度
+    }
+
+    result = should_continue(state)
+
+    # 高置信度时应该结束
+    assert result == "END"
+

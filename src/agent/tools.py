@@ -49,7 +49,18 @@ async def knowledge_search_tool(query: str, top_k: int = 3) -> str:
     try:
         # 生成查询向量
         embeddings = create_embeddings()
-        query_embedding = await embeddings.aembed_query(query)
+
+        # 截断查询文本到512 tokens以内（查询通常不需要分块）
+        from src.core.utils import truncate_text_to_tokens
+        truncated_query = truncate_text_to_tokens(query, max_tokens=512)
+        query_embedding = await embeddings.aembed_query(truncated_query)
+
+        # 添加日志提示
+        if len(query) != len(truncated_query):
+            logger.warning(
+                f"Query truncated from {len(query)} to {len(truncated_query)} chars "
+                f"to fit 512 token limit"
+            )
 
         # 检索知识库
         results = await milvus_service.search_knowledge(
