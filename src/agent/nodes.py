@@ -20,6 +20,90 @@ from src.services.llm_factory import create_llm
 logger = logging.getLogger(__name__)
 
 
+def _is_valid_user_query(query: str) -> bool:
+    """
+    验证是否为有效的用户查询
+
+    过滤外部指令模板和异常消息，确保只有真正的用户查询才能进入检索流程。
+
+    Args:
+        query: 待验证的查询文本
+
+    Returns:
+        bool: True表示是有效的用户查询，False表示应该被过滤
+    """
+    # 检查是否启用消息过滤
+    if not settings.message_filter_enabled:
+        return True
+
+    # 检查长度限制（防止超长指令模板）
+    if len(query) > settings.message_max_length:
+        logger.warning(f"Query too long: {len(query)} chars (max: {settings.message_max_length})")
+        return False
+
+    # 获取配置的指令关键词
+    instruction_keywords = [kw.strip() for kw in settings.instruction_keywords.split(",") if kw.strip()]
+
+    # 检查是否包含指令模板关键词
+    query_lower = query.lower()
+    for keyword in instruction_keywords:
+        if keyword.lower() in query_lower:
+            logger.warning(f"Instruction template detected: {keyword}")
+            return False
+
+    # 检查是否以指令开头
+    instruction_starts = ["You are", "Your role", "Please", "Convert", "Transform"]
+    if query.strip().startswith(tuple(instruction_starts)):
+        logger.warning("Query starts with instruction pattern")
+        return False
+
+    # 检查是否包含过多的技术术语（可能是系统消息）
+    technical_terms = [term.strip() for term in settings.technical_terms.split(",") if term.strip()]
+    technical_count = sum(1 for term in technical_terms if term.lower() in query_lower)
+    if technical_count >= settings.technical_terms_threshold:
+        logger.warning(f"Too many technical terms detected: {technical_count} (threshold: {settings.technical_terms_threshold})")
+        return False
+
+    return True
+
+
+def _get_filter_reason(query: str) -> str:
+    """
+    获取消息过滤的具体原因
+
+    Args:
+        query: 待验证的查询文本
+
+    Returns:
+        str: 过滤原因
+    """
+    # 检查长度限制
+    if len(query) > settings.message_max_length:
+        return "message_too_long"
+
+    # 获取配置的指令关键词
+    instruction_keywords = [kw.strip() for kw in settings.instruction_keywords.split(",") if kw.strip()]
+
+    # 检查是否包含指令模板关键词
+    query_lower = query.lower()
+    for keyword in instruction_keywords:
+        if keyword.lower() in query_lower:
+            return "instruction_template_detected"
+
+    # 检查是否以指令开头
+    instruction_starts = ["You are", "Your role", "Please", "Convert", "Transform"]
+    if query.strip().startswith(tuple(instruction_starts)):
+        return "instruction_pattern_detected"
+
+    # 检查是否包含过多的技术术语
+    technical_terms = [term.strip() for term in settings.technical_terms.split(",") if term.strip()]
+    technical_count = sum(1 for term in technical_terms if term.lower() in query_lower)
+    if technical_count >= settings.technical_terms_threshold:
+        return "too_many_technical_terms"
+
+    return "unknown"
+
+
 async def router_node(state: AgentState) -> dict[str, Any]:
     """
     路由节点：判断是否需要检索知识库
@@ -103,6 +187,8 @@ async def retrieve_node(state: AgentState) -> dict[str, Any]:
     if not query:
         logger.warning("⚠️ Retrieve node: empty query")
         return {"retrieved_docs": [], "confidence_score": 0.0}
+
+    # 注意：消息验证已在API层进行，这里不再需要过滤
 
     # 执行检索
     results = await search_knowledge_for_agent(query, top_k=settings.rag_top_k)

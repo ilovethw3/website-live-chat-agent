@@ -69,6 +69,13 @@ services:
       - RAG_SCORE_THRESHOLD=0.7
       - RAG_CHUNK_SIZE=500
       - RAG_CHUNK_OVERLAP=50
+      
+      # 消息过滤配置
+      - MESSAGE_FILTER_ENABLED=true
+      - MESSAGE_MAX_LENGTH=1000
+      - INSTRUCTION_KEYWORDS=You are an AI,Your role is to,Follow these guidelines,Use user's language,Always return,Always wrap,You are a helpful assistant,Your task is to,Please rephrase,Convert the following,Transform this query
+      - TECHNICAL_TERMS_THRESHOLD=3
+      - TECHNICAL_TERMS=API,endpoint,function,method,parameter,response,request
     
     depends_on:
       - redis

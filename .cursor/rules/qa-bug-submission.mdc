@@ -25,7 +25,7 @@ QA 角色在发现 Bug 后，应遵循标准化流程将问题提交到 GitHub I
 
 1. 复制 Bug 模板：
    ```bash
-   cp docs/qa/ISSUE-BUG-TEMPLATE.md /tmp/bug-report.md
+   cp .cursor/rules/ISSUE-BUG-TEMPLATE.md /tmp/bug-report.md
    ```
 
 2. 填写完整的 Bug 信息（参考模板结构）：

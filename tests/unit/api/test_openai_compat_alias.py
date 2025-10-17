@@ -200,7 +200,7 @@ class TestModelAlias:
 
             data = response.json()
             model_ids = [m["id"] for m in data["data"]]
-            
+
             # 应该包含deepseek embedding模型
             assert settings.embedding_model in model_ids
 
@@ -216,7 +216,7 @@ class TestModelAlias:
 
             data = response.json()
             model_ids = [m["id"] for m in data["data"]]
-            
+
             # 应该只有聊天模型，没有embedding模型
             assert len(model_ids) == 1
             assert settings.model_alias_name in model_ids
@@ -234,7 +234,7 @@ class TestModelAlias:
 
             data = response.json()
             model_ids = [m["id"] for m in data["data"]]
-            
+
             # 应该显示实际模型名
             assert settings.llm_model_name in model_ids
             assert settings.embedding_model_name in model_ids
@@ -247,7 +247,7 @@ class TestModelAlias:
             mock_agent.astream.return_value = [
                 {"llm": {"messages": [AIMessage(content="流式测试回复")]}}
             ]
-            
+
             with patch('src.agent.graph.get_agent_app', return_value=mock_agent):
                 response = client.post(
                     "/v1/chat/completions",
@@ -272,7 +272,7 @@ class TestModelAlias:
             # 模拟Agent抛出异常
             mock_agent = AsyncMock()
             mock_agent.ainvoke.side_effect = Exception("测试错误")
-            
+
             with patch('src.agent.graph.get_agent_app', return_value=mock_agent):
                 response = client.post(
                     "/v1/chat/completions",

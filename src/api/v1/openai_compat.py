@@ -29,6 +29,47 @@ from src.models.openai_schema import (
     OpenAIModelRef,
 )
 
+
+def _validate_message_source(message: str) -> bool:
+    """
+    验证消息来源，过滤非用户来源的消息
+
+    Args:
+        message: 待验证的消息内容
+
+    Returns:
+        bool: True表示是用户来源的消息，False表示应该被过滤
+    """
+    # 检查是否启用消息过滤
+    if not settings.message_filter_enabled:
+        return True
+
+    # 检查是否包含系统标识符
+    system_indicators = [
+        "system:", "assistant:", "ai:", "bot:", "agent:",
+        "SYSTEM:", "ASSISTANT:", "AI:", "BOT:", "AGENT:"
+    ]
+
+    message_lower = message.lower()
+    for indicator in system_indicators:
+        if indicator.lower() in message_lower:
+            logger.warning(f"System message detected: {indicator}")
+            return False
+
+    # 检查是否以系统标识符开头
+    if message.strip().startswith(tuple(system_indicators)):
+        logger.warning("Message starts with system indicator")
+        return False
+
+    # 检查是否包含过多的技术术语（可能是系统消息）
+    technical_terms = [term.strip() for term in settings.technical_terms.split(",") if term.strip()]
+    technical_count = sum(1 for term in technical_terms if term.lower() in message_lower)
+    if technical_count >= settings.technical_terms_threshold:
+        logger.warning(f"Too many technical terms detected: {technical_count} (threshold: {settings.technical_terms_threshold})")
+        return False
+
+    return True
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
@@ -202,6 +243,52 @@ async def _non_stream_response(
     requested_model: str,
 ) -> ChatCompletionResponse:
     """非流式响应"""
+    from src.agent.nodes import _get_filter_reason, _is_valid_user_query
+
+    # 在非流式路径中也进行消息验证，过滤外部指令模板
+    if not _validate_message_source(user_message):
+        logger.warning("⚠️ 非流式API层过滤非用户来源消息")
+        return ChatCompletionResponse(
+            id=completion_id,
+            created=created_timestamp,
+            model=requested_model,
+            choices=[
+                ChatCompletionChoice(
+                    index=0,
+                    message=ChatMessage(
+                        role="assistant",
+                        content="抱歉，系统消息无法处理。请发送用户问题。"
+                    ),
+                    finish_reason="content_filter",
+                )
+            ],
+            usage=ChatCompletionUsage(
+                prompt_tokens=0, completion_tokens=0, total_tokens=0
+            ),
+        )
+
+    if not _is_valid_user_query(user_message):
+        filter_reason = _get_filter_reason(user_message)
+        logger.warning(f"⚠️ 非流式API层过滤无效消息 (reason: {filter_reason}, length: {len(user_message)})")
+        return ChatCompletionResponse(
+            id=completion_id,
+            created=created_timestamp,
+            model=requested_model,
+            choices=[
+                ChatCompletionChoice(
+                    index=0,
+                    message=ChatMessage(
+                        role="assistant",
+                        content="抱歉，您的消息包含无效内容，无法处理。请重新发送您的问题。"
+                    ),
+                    finish_reason="content_filter",
+                )
+            ],
+            usage=ChatCompletionUsage(
+                prompt_tokens=0, completion_tokens=0, total_tokens=0
+            ),
+        )
+
     # 调用 Agent
     app = get_agent_app()
 
@@ -282,7 +369,56 @@ async def _stream_response(
     requested_model: str,
 ) -> AsyncGenerator[str, None]:
     """流式响应（SSE）"""
+    from src.agent.nodes import _is_valid_user_query
+
     app = get_agent_app()
+
+    # 在API层进行消息来源验证
+    # 检查消息来源，过滤非用户来源的消息
+    if not _validate_message_source(user_message):
+        logger.warning("⚠️ API层过滤非用户来源消息")
+        # 返回错误响应，不进入Agent流程
+        error_chunk = ChatCompletionChunk(
+            id=completion_id,
+            created=created_timestamp,
+            model=requested_model,
+            choices=[
+                ChatCompletionChunkChoice(
+                    index=0,
+                    delta=ChatCompletionChunkDelta(
+                        content="抱歉，系统消息无法处理。请发送用户问题。"
+                    ),
+                    finish_reason="content_filter",
+                )
+            ],
+        )
+        yield f"data: {error_chunk.model_dump_json()}\n\n"
+        yield "data: [DONE]\n\n"
+        return
+
+    # 在API层进行消息验证，过滤外部指令模板
+    if not _is_valid_user_query(user_message):
+        from src.agent.nodes import _get_filter_reason
+        filter_reason = _get_filter_reason(user_message)
+        logger.warning(f"⚠️ API层过滤无效消息 (reason: {filter_reason}, length: {len(user_message)})")
+        # 返回错误响应，不进入Agent流程
+        error_chunk = ChatCompletionChunk(
+            id=completion_id,
+            created=created_timestamp,
+            model=requested_model,
+            choices=[
+                ChatCompletionChunkChoice(
+                    index=0,
+                    delta=ChatCompletionChunkDelta(
+                        content="抱歉，您的消息包含无效内容，无法处理。请重新发送您的问题。"
+                    ),
+                    finish_reason="content_filter",
+                )
+            ],
+        )
+        yield f"data: {error_chunk.model_dump_json()}\n\n"
+        yield "data: [DONE]\n\n"
+        return
 
     initial_state = {
         "messages": [HumanMessage(content=user_message)],
