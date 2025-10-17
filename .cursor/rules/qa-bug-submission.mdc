@@ -108,7 +108,7 @@ rm /tmp/bug-report.md
 
 ## Bug 模板位置
 
-- **模板文件**：[docs/qa/ISSUE-BUG-TEMPLATE.md](mdc:docs/qa/ISSUE-BUG-TEMPLATE.md)
+- **模板文件**：[.cursor/rules/ISSUE-BUG-TEMPLATE.md](mdc:.cursor/rules/ISSUE-BUG-TEMPLATE.md)
 - 包含完整的字段说明和示例
 
 ## QA 职责边界
