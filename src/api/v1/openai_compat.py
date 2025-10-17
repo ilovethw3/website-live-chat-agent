@@ -453,7 +453,20 @@ async def _stream_response(
             # 检查是否有新的 AI 消息
             if "llm" in chunk:  # LLM 节点的输出
                 llm_output = chunk["llm"]
-                messages = llm_output.get("messages", [])
+
+                # 类型检查：确保llm_output是字典类型
+                if isinstance(llm_output, dict):
+                    messages = llm_output.get("messages", [])
+                elif isinstance(llm_output, str):
+                    # 如果llm_output是字符串，可能是错误信息或直接内容
+                    logger.warning(f"⚠️ LLM output is string: {llm_output}")
+                    # 创建一个临时的AI消息
+                    from langchain_core.messages import AIMessage
+                    messages = [AIMessage(content=llm_output)]
+                else:
+                    logger.error(f"❌ Unexpected llm_output type: {type(llm_output)}")
+                    continue
+
                 if messages:
                     ai_message = messages[-1]
                     if isinstance(ai_message, AIMessage):
