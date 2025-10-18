@@ -104,6 +104,7 @@ class TestIssue41SiliconFlowEmbeddingFix:
             model="BAAI/bge-large-zh-v1.5"
         )
 
+        # 直接模拟异步方法返回结果
         with patch.object(embeddings, 'aembed_query', return_value=[0.1, 0.2, 0.3]) as mock_aembed:
             result = embeddings.embed_query("退货")
 
@@ -117,6 +118,7 @@ class TestIssue41SiliconFlowEmbeddingFix:
             model="BAAI/bge-large-zh-v1.5"
         )
 
+        # 直接模拟异步方法返回结果
         with patch.object(embeddings, 'aembed_documents', return_value=[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]) as mock_aembed:
             result = embeddings.embed_documents(["退货", "退款"])
 
@@ -177,9 +179,11 @@ class TestIssue41SiliconFlowEmbeddingFix:
         )
 
         # 模拟API错误
+        mock_response = Mock()
+        mock_response.status_code = 500
         with patch("httpx.AsyncClient") as mock_client:
             mock_client.return_value.__aenter__.return_value.post = AsyncMock(
-                side_effect=httpx.HTTPStatusError("500 Internal Server Error", request=Mock(), response=Mock())
+                side_effect=httpx.HTTPStatusError("500 Internal Server Error", request=Mock(), response=mock_response)
             )
 
             with pytest.raises(httpx.HTTPStatusError):
@@ -218,3 +222,110 @@ class TestIssue41SiliconFlowEmbeddingFix:
             # 确保没有发送token ID数组格式
             assert not isinstance(request_data["input"], list)
             assert "encoding_format" not in request_data
+
+    @pytest.mark.asyncio
+    async def test_retry_mechanism_on_5xx_error(self):
+        """测试5xx错误时的重试机制"""
+        embeddings = SiliconFlowEmbeddings(
+            api_key="test-key",
+            model="BAAI/bge-large-zh-v1.5"
+        )
+
+        # 模拟第一次5xx错误，第二次成功
+        mock_response_success = Mock()
+        mock_response_success.json.return_value = {
+            "data": [{"embedding": [0.1, 0.2, 0.3]}]
+        }
+        mock_response_success.raise_for_status.return_value = None
+
+        # 创建5xx错误的Mock响应
+        mock_5xx_response = Mock()
+        mock_5xx_response.status_code = 500
+
+        with patch("httpx.AsyncClient") as mock_client:
+            # 第一次调用失败，第二次成功
+            mock_post = AsyncMock(side_effect=[
+                httpx.HTTPStatusError("500 Internal Server Error", request=Mock(), response=mock_5xx_response),
+                mock_response_success
+            ])
+            mock_client.return_value.__aenter__.return_value.post = mock_post
+
+            result = await embeddings.aembed_query("退货")
+
+            # 验证结果
+            assert result == [0.1, 0.2, 0.3]
+            # 验证重试了2次
+            assert mock_post.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_no_retry_on_4xx_error(self):
+        """测试4xx错误时不重试"""
+        embeddings = SiliconFlowEmbeddings(
+            api_key="test-key",
+            model="BAAI/bge-large-zh-v1.5"
+        )
+
+        # 创建4xx错误的Mock响应
+        mock_4xx_response = Mock()
+        mock_4xx_response.status_code = 400
+
+        with patch("httpx.AsyncClient") as mock_client:
+            # 模拟4xx错误
+            mock_post = AsyncMock(side_effect=httpx.HTTPStatusError("400 Bad Request", request=Mock(), response=mock_4xx_response))
+            mock_client.return_value.__aenter__.return_value.post = mock_post
+
+            with pytest.raises(httpx.HTTPStatusError):
+                await embeddings.aembed_query("退货")
+
+            # 验证只调用了一次，没有重试
+            assert mock_post.call_count == 1
+
+    @pytest.mark.asyncio
+    async def test_network_error_retry(self):
+        """测试网络错误时的重试机制"""
+        embeddings = SiliconFlowEmbeddings(
+            api_key="test-key",
+            model="BAAI/bge-large-zh-v1.5"
+        )
+
+        # 模拟网络错误，然后成功
+        mock_response_success = Mock()
+        mock_response_success.json.return_value = {
+            "data": [{"embedding": [0.1, 0.2, 0.3]}]
+        }
+        mock_response_success.raise_for_status.return_value = None
+
+        with patch("httpx.AsyncClient") as mock_client:
+            # 第一次网络错误，第二次成功
+            mock_post = AsyncMock(side_effect=[
+                httpx.TimeoutException("Request timeout"),
+                mock_response_success
+            ])
+            mock_client.return_value.__aenter__.return_value.post = mock_post
+
+            result = await embeddings.aembed_query("退货")
+
+            # 验证结果
+            assert result == [0.1, 0.2, 0.3]
+            # 验证重试了2次
+            assert mock_post.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_max_retries_exceeded(self):
+        """测试超过最大重试次数时的行为"""
+        embeddings = SiliconFlowEmbeddings(
+            api_key="test-key",
+            model="BAAI/bge-large-zh-v1.5"
+        )
+
+        with patch("httpx.AsyncClient") as mock_client:
+            # 模拟持续的网络错误
+            mock_post = AsyncMock(side_effect=httpx.TimeoutException("Request timeout"))
+            mock_client.return_value.__aenter__.return_value.post = mock_post
+
+            with pytest.raises(httpx.TimeoutException):
+                await embeddings.aembed_query("退货")
+
+            # 验证重试了最大次数 + 1 次（初始调用 + 重试次数）
+            assert mock_post.call_count == embeddings.max_retries + 1
+

@@ -10,6 +10,32 @@ description: LD 修复 Bug 和提交代码的标准流程与职责边界
 
 ---
 
+## 🚨 强制性检查清单
+
+### 🚫 绝对禁止的操作
+- [ ] **直接推送到 main 分支** - 这是最严重的违规行为
+- [ ] **在 main 分支上直接修复代码** - 必须创建功能分支
+- [ ] **自己审查和合并自己的 PR**（非 Solo 项目）
+- [ ] **跳过测试就提交代码**
+- [ ] **不创建简短修复摘要文件**
+- [ ] **不创建 PR 就直接合并**
+
+### ✅ 必须执行的步骤
+- [ ] **创建功能分支** - `git checkout -b fix/issue-<number>-description`
+- [ ] **运行所有测试** - `pytest tests/unit/ -v`
+- [ ] **检查覆盖率** - 确保 ≥ 80%
+- [ ] **运行 Linter** - `ruff check .`
+- [ ] **创建简短修复摘要** - `project_document/issue-fixes/issue-<number>-brief.md`
+- [ ] **创建 PR 并请求审查** - 等待审查者批准
+- [ ] **遵循语义化提交规范** - 使用 `fix(scope):` 格式
+
+### ⚠️ 违规后果
+- **直接推送到 main**：可能导致代码冲突、破坏主分支稳定性
+- **跳过分支创建**：无法进行代码审查、回滚困难
+- **自己合并 PR**：缺乏代码质量保证、可能引入新问题
+
+---
+
 ## 一、修复 Bug 的标准流程
 
 ### 1. 接收任务
@@ -24,7 +50,8 @@ description: LD 修复 Bug 和提交代码的标准流程与职责边界
 - **产出**：在心中或简单笔记中理解问题根因
 
 ### 3. 修复代码
-- 创建修复分支
+- **🚫 禁止在 main 分支上直接修复，必须创建功能分支**
+- 创建修复分支：`git checkout -b fix/issue-<number>-brief-description`
 - 在分支上修改源代码修复 Bug
 - 更新或修复相关测试用例
 - 确保所有测试通过：`pytest tests/unit/ -v`
@@ -106,8 +133,10 @@ git add project_document/issue-fixes/issue-123-brief.md
 
 ## 二、Git 提交流程
 
-### 1. 创建功能分支
+### 1. 创建功能分支（**强制性步骤**）
 ```bash
+# 🚫 绝对禁止：在 main 分支上直接修复
+# ✅ 必须执行：创建功能分支
 git checkout -b fix/issue-<number>-brief-description
 # 例如：git checkout -b fix/issue-123-null-pointer
 ```
@@ -183,9 +212,10 @@ gh pr edit <PR-number> --add-reviewer <architect-username>
 - **QA 职责**：验证 Bug 修复、生成测试报告
 
 **Solo 项目特殊情况**：
-- 如果是个人项目且只有一个开发者，可以自己审查并合并
-- 但仍建议创建 PR 而不是直接推送到 main
+- **即使是个人项目，也必须创建分支和 PR**
+- 只有在审查和合并环节可以自己操作
 - 在 PR 中说明："Solo project - self review"
+- **建议等待 24 小时冷静期**：即使可以自己审查，也建议等待一段时间再合并
 
 **LD 绝对不应该做**：
 ```bash
@@ -321,10 +351,24 @@ git commit -m "feat(module): 添加新功能 X
 Fixes #124"
 ```
 
+### 紧急情况定义
+
+**什么是紧急情况**：
+- 🚨 生产环境崩溃或严重错误
+- 🚨 数据泄露或安全漏洞
+- 🚨 系统完全无法使用
+- 🚨 影响大量用户的关键功能
+
+**紧急情况下的流程**：
+- ✅ **仍然必须创建分支** - 不能跳过
+- ✅ **仍然必须创建 PR** - 不能跳过
+- ⚡ **可以加速审查流程** - 标记为紧急，请求快速审查
+- ⚡ **可以自己审查和合并** - 但仅限于真正的紧急情况
+
 ### 场景 3：紧急 Hotfix
 
 ```bash
-# 1. 从 main 创建 hotfix 分支
+# 1. 从 main 创建 hotfix 分支（仍然必须）
 git checkout -b hotfix/critical-bug
 
 # 2. 快速修复（保持最小改动）
@@ -411,12 +455,19 @@ project_document/issue-fixes/issue-123-brief.md (15 lines)
 Fixes #1, #2
 ```
 
-### ❌ 反模式 3：直接推送到 main
+### ❌ 反模式 3：直接推送到 main（**最严重违规**）
 ```bash
-# ❌ 禁止
+# 🚫 绝对禁止 - 这是最严重的违规行为
 git push origin main
 
-# ✅ 使用 PR 流程
+# 违规后果：
+# - 可能导致代码冲突
+# - 破坏主分支稳定性
+# - 无法进行代码审查
+# - 回滚困难
+# - 可能引入新问题
+
+# ✅ 正确的 PR 流程
 git checkout -b fix/issue-123
 # ... 修复 ...
 git push origin fix/issue-123
@@ -447,6 +498,6 @@ gh pr create
 
 ---
 
-**版本**: v1.0  
-**最后更新**: 2025-10-14  
+**版本**: v1.1  
+**最后更新**: 2025-01-17  
 **维护者**: AI-ROLE System
