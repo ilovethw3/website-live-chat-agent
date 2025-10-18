@@ -8,6 +8,7 @@ alwaysApply: true
 ## python环境
 - cd /home/tian/Python/website-live-chat-agent && source .venv/bin/activate
 - 使用uv维护python环境
+- 肯定存在`.env.example`文件，请仔细查找。
 
 ## 技术栈
 - GitHub Actions 自动构建和发布

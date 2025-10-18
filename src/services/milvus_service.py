@@ -232,13 +232,13 @@ class MilvusService:
         # 格式化结果
         filtered_results = []
         threshold = score_threshold or settings.rag_score_threshold
-
         for hit in results[0]:
-            if hit.score >= threshold:
+            similarity_score = 1.0 - (hit.score / 2.0)
+            if similarity_score >= threshold:
                 filtered_results.append(
                     {
                         "text": hit.entity.get("text"),
-                        "score": hit.score,
+                        "score": similarity_score,  # 返回相似度而非距离
                         "metadata": hit.entity.get("metadata"),
                     }
                 )

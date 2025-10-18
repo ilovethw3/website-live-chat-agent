@@ -197,6 +197,25 @@ class Settings(BaseSettings):
     )
     cache_ttl: int = Field(default=300, ge=0, description="缓存 TTL（秒）")
 
+    # ===== 消息过滤配置 =====
+    message_filter_enabled: bool = Field(
+        default=True, description="是否启用消息过滤"
+    )
+    message_max_length: int = Field(
+        default=1000, ge=100, le=5000, description="消息最大长度（字符）"
+    )
+    instruction_keywords: str = Field(
+        default="You are an AI,Your role is to,Follow these guidelines,Use user's language,Always return,Always wrap,You are a helpful assistant,Your task is to,Please rephrase,Convert the following,Transform this query",
+        description="指令模板关键词（逗号分隔）"
+    )
+    technical_terms_threshold: int = Field(
+        default=3, ge=1, le=10, description="技术术语阈值（超过此数量将被过滤）"
+    )
+    technical_terms: str = Field(
+        default="API,endpoint,function,method,parameter,response,request",
+        description="技术术语列表（逗号分隔）"
+    )
+
     # ===== Pydantic 配置 =====
     model_config = SettingsConfigDict(
         env_file=".env",

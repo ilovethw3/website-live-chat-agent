@@ -2,16 +2,37 @@
 示例数据初始化脚本
 
 上传一些示例知识库数据，用于测试 Agent 功能。
+
+使用方法:
+1. 确保 .env 文件配置正确（包含API_KEY）
+2. 启动服务: python main.py
+3. 运行脚本: python scripts/init_example_data.py
+
+必需环境变量:
+- API_KEY: API认证密钥
 """
 
 import asyncio
 import logging
+import os
+import sys
 
 import httpx
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
 
 # 配置
-API_BASE_URL = "http://localhost:8000"
-API_KEY = "your-api-key"  # 从环境变量或 .env 读取
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+API_KEY = os.getenv("API_KEY")
+
+# 验证API Key
+if not API_KEY:
+    print("❌ 错误: API_KEY 环境变量未设置")
+    print("请检查 .env 文件是否包含 API_KEY 配置")
+    print("示例: API_KEY=your-secure-api-key")
+    sys.exit(1)
 
 # 示例知识库数据
 EXAMPLE_DOCUMENTS = [
