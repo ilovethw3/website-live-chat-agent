@@ -176,16 +176,35 @@ class Settings(BaseSettings):
         default="redis", description="Checkpointer 类型"
     )
 
-    # ===== RAG 配置 =====
-    rag_top_k: int = Field(default=3, ge=1, le=10, description="知识库检索 Top-K")
-    rag_score_threshold: float = Field(
-        default=0.7, ge=0.0, le=1.0, description="相似度分数阈值"
+    # ===== 向量召回配置 =====
+    # 注意：rag_* 配置项已迁移为 vector_*，通过 validation_alias 保持向后兼容
+    vector_top_k: int = Field(
+        default=3, 
+        ge=1, 
+        le=10, 
+        description="向量召回 Top-K",
+        validation_alias="RAG_TOP_K"
     )
-    rag_chunk_size: int = Field(
-        default=500, ge=100, le=2000, description="文档切片大小（tokens）"
+    vector_score_threshold: float = Field(
+        default=0.7, 
+        ge=0.0, 
+        le=1.0, 
+        description="向量召回相似度分数阈值",
+        validation_alias="RAG_SCORE_THRESHOLD"
     )
-    rag_chunk_overlap: int = Field(
-        default=50, ge=0, le=500, description="文档切片重叠（tokens）"
+    vector_chunk_size: int = Field(
+        default=500, 
+        ge=100, 
+        le=2000, 
+        description="向量召回文档切片大小（tokens）",
+        validation_alias="RAG_CHUNK_SIZE"
+    )
+    vector_chunk_overlap: int = Field(
+        default=50, 
+        ge=0, 
+        le=500, 
+        description="向量召回文档切片重叠（tokens）",
+        validation_alias="RAG_CHUNK_OVERLAP"
     )
 
     # ===== 性能配置 =====
@@ -214,6 +233,47 @@ class Settings(BaseSettings):
     technical_terms: str = Field(
         default="API,endpoint,function,method,parameter,response,request",
         description="技术术语列表（逗号分隔）"
+    )
+
+    # ===== 召回编排层配置 =====
+    recall_sources: list[str] = Field(
+        default=["vector"],
+        description="启用的召回源列表"
+    )
+    recall_source_weights: str = Field(
+        default="vector:1.0",
+        description="召回源权重配置（逗号分隔，如 vector:1.0,keyword:0.8）"
+    )
+    recall_timeout_ms: int = Field(
+        default=500,
+        ge=100, le=2000,
+        description="召回超时时间（毫秒）"
+    )
+    recall_retry: int = Field(
+        default=1,
+        ge=0, le=3,
+        description="召回失败重试次数"
+    )
+    recall_merge_strategy: Literal["weighted", "rrf", "custom"] = Field(
+        default="weighted",
+        description="召回结果合并策略"
+    )
+    recall_degrade_threshold: float = Field(
+        default=0.5,
+        ge=0.0, le=1.0,
+        description="召回结果置信度降级阈值"
+    )
+    recall_fallback_enabled: bool = Field(
+        default=True,
+        description="是否启用召回降级策略"
+    )
+    recall_experiment_enabled: bool = Field(
+        default=False,
+        description="是否启用召回实验"
+    )
+    recall_experiment_platform: str | None = Field(
+        default=None,
+        description="实验平台类型（None/internal/growthbook等）"
     )
 
     # ===== Pydantic 配置 =====
@@ -414,6 +474,27 @@ class Settings(BaseSettings):
             results["embedding_error"] = str(e)
 
         return results
+
+    # ===== 向后兼容别名（已废弃，请使用 vector_* 配置项） =====
+    @property
+    def rag_top_k(self) -> int:
+        """向后兼容别名，已废弃，请使用 vector_top_k"""
+        return self.vector_top_k
+
+    @property
+    def rag_score_threshold(self) -> float:
+        """向后兼容别名，已废弃，请使用 vector_score_threshold"""
+        return self.vector_score_threshold
+
+    @property
+    def rag_chunk_size(self) -> int:
+        """向后兼容别名，已废弃，请使用 vector_chunk_size"""
+        return self.vector_chunk_size
+
+    @property
+    def rag_chunk_overlap(self) -> int:
+        """向后兼容别名，已废弃，请使用 vector_chunk_overlap"""
+        return self.vector_chunk_overlap
 
 
 # 全局配置实例（单例）

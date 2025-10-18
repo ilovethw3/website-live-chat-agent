@@ -13,7 +13,6 @@ from typing import Any
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from src.agent.state import AgentState
-from src.agent.tools import search_knowledge_for_agent
 from src.core.config import settings
 from src.services.llm_factory import create_llm
 
@@ -190,43 +189,72 @@ async def retrieve_node(state: AgentState) -> dict[str, Any]:
 
     # 注意：消息验证已在API层进行，这里不再需要过滤
 
-    # 执行检索
-    results = await search_knowledge_for_agent(query, top_k=settings.rag_top_k)
+    # 使用召回Agent进行多源检索
+    from src.agent.recall.graph import invoke_recall_agent
+    from src.agent.recall.schema import RecallRequest
+    from src.core.utils import generate_trace_id
 
-    if not results:
+    # 构建召回请求
+    recall_request = RecallRequest(
+        query=query,
+        session_id=state.get("session_id", "unknown"),
+        trace_id=generate_trace_id(),
+        user_profile=state.get("user_profile"),
+        context=state.get("context"),
+        experiment_id=state.get("experiment_id"),
+        top_k=settings.vector_top_k,
+    )
+
+    # 调用召回Agent
+    recall_result = await invoke_recall_agent(recall_request)
+
+    if not recall_result.hits:
         logger.info(f"📭 Retrieve node: no results found for '{query}'")
         return {"retrieved_docs": [], "confidence_score": 0.0}
 
-    # 格式化检索结果
+    # 格式化召回结果
     formatted_docs = []
-    for i, result in enumerate(results, 1):
-        metadata = result.get("metadata", {})
+    for i, hit in enumerate(recall_result.hits, 1):
+        metadata = hit.metadata
         title = metadata.get("title", "未命名文档")
         url = metadata.get("url", "")
+        source = hit.source
 
         doc_text = f"[文档{i}] {title}"
         if url:
             doc_text += f" (来源: {url})"
-        doc_text += f"\n{result['text']}"
+        doc_text += f" [召回源: {source}]"
+        doc_text += f"\n{hit.content}"
 
         formatted_docs.append(doc_text)
 
-    # 计算置信度（使用最高分数）
-    confidence = results[0]["score"] if results else 0.0
+    # 计算置信度（使用最高分）
+    confidence = recall_result.hits[0].score if recall_result.hits else 0.0
 
+    # 记录召回指标
     logger.info(
-        f"✅ Retrieve node: found {len(results)} documents, "
-        f"confidence={confidence:.2f}"
+        f"✅ Retrieve node: found {len(recall_result.hits)} documents, "
+        f"confidence={confidence:.2f}, latency={recall_result.latency_ms:.1f}ms, "
+        f"degraded={recall_result.degraded}, sources={[hit.source for hit in recall_result.hits]}"
     )
 
     return {
         "retrieved_docs": formatted_docs,
         "confidence_score": confidence,
+        "recall_metrics": {
+            "latency_ms": recall_result.latency_ms,
+            "degraded": recall_result.degraded,
+            "sources": [hit.source for hit in recall_result.hits],
+            "trace_id": recall_result.trace_id,
+        },
         "tool_calls": state.get("tool_calls", []) + [
             {
                 "node": "retrieve",
-                "results_count": len(results),
-                "top_score": confidence
+                "results_count": len(recall_result.hits),
+                "top_score": confidence,
+                "recall_sources": [hit.source for hit in recall_result.hits],
+                "latency_ms": recall_result.latency_ms,
+                "degraded": recall_result.degraded
             }
         ]
     }

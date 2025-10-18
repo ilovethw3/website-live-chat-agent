@@ -343,15 +343,15 @@ class TestIssue41SiliconFlowEmbeddingFix:
                 # 模拟已有事件循环
                 mock_loop = Mock()
                 mock_get_loop.return_value = mock_loop
-                
+
                 # 模拟 ThreadPoolExecutor
                 with patch('concurrent.futures.ThreadPoolExecutor') as mock_executor:
                     mock_future = Mock()
                     mock_future.result.return_value = [0.1, 0.2, 0.3]
                     mock_executor.return_value.__enter__.return_value.submit.return_value = mock_future
-                    
+
                     result = embeddings.embed_query("退货")
-                    
+
                     # 验证结果
                     assert result == [0.1, 0.2, 0.3]
                     # 验证使用了 ThreadPoolExecutor
@@ -370,9 +370,9 @@ class TestIssue41SiliconFlowEmbeddingFix:
             with patch('asyncio.get_running_loop', side_effect=RuntimeError("No running event loop")):
                 with patch('asyncio.run') as mock_asyncio_run:
                     mock_asyncio_run.return_value = [0.1, 0.2, 0.3]
-                    
+
                     result = embeddings.embed_query("退货")
-                    
+
                     # 验证结果
                     assert result == [0.1, 0.2, 0.3]
                     # 验证使用了 asyncio.run，传入的是协程对象
@@ -399,9 +399,9 @@ class TestIssue41SiliconFlowEmbeddingFix:
                 mock_future = Mock()
                 mock_future.result.return_value = [0.1, 0.2, 0.3]
                 mock_executor.return_value.__enter__.return_value.submit.return_value = mock_future
-                
+
                 result = embeddings.embed_query("退货")
-                
+
                 # 验证结果
                 assert result == [0.1, 0.2, 0.3]
                 # 验证使用了 ThreadPoolExecutor

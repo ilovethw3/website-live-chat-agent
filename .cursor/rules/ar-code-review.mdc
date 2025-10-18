@@ -36,8 +36,7 @@ gh pr checkout <PR-number>
 - [ ] 新增的依赖是否合理
 
 **参考文档**：
-- [ADR-0001: LangGraph架构](mdc:docs/adr/0001-langgraph-architecture.md)
-- [ADR-0002: Milvus集成](mdc:docs/adr/0002-milvus-integration.md)
+- docs/adr/ 目录下的adr文档
 
 #### 2.2 代码质量检查
 
@@ -222,18 +221,6 @@ gh pr review <PR-number> \
   --line 96
 ```
 
-### 方式B：GitHub网页界面
-
-1. 打开PR页面
-2. 点击 **"Files changed"** 标签
-3. 对代码行添加评论（点击行号旁的 `+` 号）
-4. 点击右上角 **"Review changes"** 按钮
-5. 填写总体评论
-6. 选择决策类型：
-   - **Comment**（仅评论）
-   - **Approve**（批准）
-   - **Request changes**（请求修改）
-7. 点击 **"Submit review"**
 
 ---
 

@@ -919,6 +919,107 @@ components:
         timestamp:
           type: integer
 
+    # ===== 召回编排层数据模型 =====
+    RecallRequest:
+      type: object
+      required: [query, session_id, trace_id]
+      properties:
+        query:
+          type: string
+          description: 用户查询内容
+          example: "你们的退货政策是什么？"
+        session_id:
+          type: string
+          description: 会话ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        trace_id:
+          type: string
+          description: 追踪ID
+          example: "trace-abc123"
+        user_profile:
+          type: object
+          nullable: true
+          description: 用户画像信息
+          example: {"user_type": "premium", "location": "beijing"}
+        context:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: 上下文信息
+          example: ["用户询问了产品价格", "用户对iPhone 15感兴趣"]
+        experiment_id:
+          type: string
+          nullable: true
+          description: 实验ID
+          example: "exp-recall-v2"
+        top_k:
+          type: integer
+          default: 5
+          minimum: 1
+          maximum: 20
+          description: 返回结果数量
+          example: 5
+
+    RecallHit:
+      type: object
+      required: [source, score, confidence, reason, content]
+      properties:
+        source:
+          type: string
+          description: 召回源名称
+          example: "vector"
+        score:
+          type: number
+          format: float
+          description: 相似度分数（0-1）
+          example: 0.92
+        confidence:
+          type: number
+          format: float
+          description: 置信度（0-1）
+          example: 0.88
+        reason:
+          type: string
+          description: 命中原因
+          example: "向量相似度匹配"
+        content:
+          type: string
+          description: 召回内容
+          example: "我们的退货政策：收到商品后30天内可申请退货..."
+        metadata:
+          type: object
+          description: 元数据信息
+          example: {"title": "退货政策", "url": "https://example.com/return-policy", "category": "政策"}
+
+    RecallResult:
+      type: object
+      required: [hits, latency_ms, degraded, trace_id]
+      properties:
+        hits:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecallHit'
+          description: 召回结果列表
+        latency_ms:
+          type: number
+          format: float
+          description: 召回耗时（毫秒）
+          example: 245.5
+        degraded:
+          type: boolean
+          description: 是否发生降级
+          example: false
+        trace_id:
+          type: string
+          description: 追踪ID
+          example: "trace-abc123"
+        experiment_id:
+          type: string
+          nullable: true
+          description: 实验ID
+          example: "exp-recall-v2"
+
     # ===== 错误响应 =====
     ErrorResponse:
       type: object

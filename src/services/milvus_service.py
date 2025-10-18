@@ -231,7 +231,7 @@ class MilvusService:
 
         # 格式化结果
         filtered_results = []
-        threshold = score_threshold or settings.rag_score_threshold
+        threshold = score_threshold or settings.vector_score_threshold
         for hit in results[0]:
             similarity_score = 1.0 - (hit.score / 2.0)
             if similarity_score >= threshold:

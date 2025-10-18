@@ -4,6 +4,7 @@
 提供文本截断、分块等功能，用于处理 embedding API 的 token 限制。
 """
 
+import uuid
 from typing import List
 
 import tiktoken
@@ -61,3 +62,13 @@ def chunk_text_for_embedding(text: str, max_tokens: int = 512) -> List[str]:
         # 降级方案：按字符分块
         max_chars = max_tokens * 2
         return [text[i:i + max_chars] for i in range(0, len(text), max_chars)]
+
+
+def generate_trace_id() -> str:
+    """
+    生成唯一的追踪ID
+    
+    Returns:
+        格式为 "trace-{uuid4}" 的追踪ID
+    """
+    return f"trace-{uuid.uuid4().hex[:8]}"
