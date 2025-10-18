@@ -68,12 +68,10 @@ class SiliconFlowEmbeddings(Embeddings):
         try:
             # 检查是否已经在事件循环中
             loop = asyncio.get_running_loop()
-            # 如果已经在事件循环中，使用 create_task 和 await
-            task = loop.create_task(self.aembed_documents(texts))
-            # 在已有事件循环中，我们需要使用不同的方法
+            # 如果已经在事件循环中，使用 run_in_executor 在单独线程中运行
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, self.aembed_documents(texts))
+                future = executor.submit(self._run_async_in_thread, self.aembed_documents, texts)
                 return future.result()
         except RuntimeError:
             # 没有运行的事件循环，使用 asyncio.run
@@ -84,16 +82,18 @@ class SiliconFlowEmbeddings(Embeddings):
         try:
             # 检查是否已经在事件循环中
             loop = asyncio.get_running_loop()
-            # 如果已经在事件循环中，使用 create_task 和 await
-            task = loop.create_task(self.aembed_query(text))
-            # 在已有事件循环中，我们需要使用不同的方法
+            # 如果已经在事件循环中，使用 run_in_executor 在单独线程中运行
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, self.aembed_query(text))
+                future = executor.submit(self._run_async_in_thread, self.aembed_query, text)
                 return future.result()
         except RuntimeError:
             # 没有运行的事件循环，使用 asyncio.run
             return asyncio.run(self.aembed_query(text))
+
+    def _run_async_in_thread(self, async_func, *args):
+        """在单独线程中运行异步函数"""
+        return asyncio.run(async_func(*args))
 
     async def _make_embedding_request(self, input_data, is_query: bool = False):
         """发送嵌入请求，包含重试机制和错误处理"""

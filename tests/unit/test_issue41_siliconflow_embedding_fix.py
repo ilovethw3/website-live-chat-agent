@@ -329,3 +329,81 @@ class TestIssue41SiliconFlowEmbeddingFix:
             # 验证重试了最大次数 + 1 次（初始调用 + 重试次数）
             assert mock_post.call_count == embeddings.max_retries + 1
 
+    def test_sync_methods_in_event_loop(self):
+        """测试同步方法在事件循环中的行为"""
+        embeddings = SiliconFlowEmbeddings(
+            api_key="test-key",
+            model="BAAI/bge-large-zh-v1.5"
+        )
+
+        # 模拟异步方法返回结果
+        with patch.object(embeddings, 'aembed_query', return_value=[0.1, 0.2, 0.3]) as mock_aembed:
+            # 模拟在事件循环中调用同步方法
+            with patch('asyncio.get_running_loop') as mock_get_loop:
+                # 模拟已有事件循环
+                mock_loop = Mock()
+                mock_get_loop.return_value = mock_loop
+                
+                # 模拟 ThreadPoolExecutor
+                with patch('concurrent.futures.ThreadPoolExecutor') as mock_executor:
+                    mock_future = Mock()
+                    mock_future.result.return_value = [0.1, 0.2, 0.3]
+                    mock_executor.return_value.__enter__.return_value.submit.return_value = mock_future
+                    
+                    result = embeddings.embed_query("退货")
+                    
+                    # 验证结果
+                    assert result == [0.1, 0.2, 0.3]
+                    # 验证使用了 ThreadPoolExecutor
+                    mock_executor.assert_called_once()
+
+    def test_sync_methods_outside_event_loop(self):
+        """测试同步方法在事件循环外的行为"""
+        embeddings = SiliconFlowEmbeddings(
+            api_key="test-key",
+            model="BAAI/bge-large-zh-v1.5"
+        )
+
+        # 模拟异步方法返回结果
+        with patch.object(embeddings, 'aembed_query', return_value=[0.1, 0.2, 0.3]) as mock_aembed:
+            # 模拟没有事件循环
+            with patch('asyncio.get_running_loop', side_effect=RuntimeError("No running event loop")):
+                with patch('asyncio.run') as mock_asyncio_run:
+                    mock_asyncio_run.return_value = [0.1, 0.2, 0.3]
+                    
+                    result = embeddings.embed_query("退货")
+                    
+                    # 验证结果
+                    assert result == [0.1, 0.2, 0.3]
+                    # 验证使用了 asyncio.run，传入的是协程对象
+                    mock_asyncio_run.assert_called_once()
+                    # 验证调用参数是协程对象
+                    call_args = mock_asyncio_run.call_args[0]
+                    assert len(call_args) == 1
+                    # 验证传入的是协程对象（通过检查类型）
+                    import inspect
+                    assert inspect.iscoroutine(call_args[0])
+
+    @pytest.mark.asyncio
+    async def test_sync_methods_in_async_context(self):
+        """测试在异步上下文中调用同步方法"""
+        embeddings = SiliconFlowEmbeddings(
+            api_key="test-key",
+            model="BAAI/bge-large-zh-v1.5"
+        )
+
+        # 模拟异步方法返回结果
+        with patch.object(embeddings, 'aembed_query', return_value=[0.1, 0.2, 0.3]) as mock_aembed:
+            # 在异步上下文中调用同步方法
+            with patch('concurrent.futures.ThreadPoolExecutor') as mock_executor:
+                mock_future = Mock()
+                mock_future.result.return_value = [0.1, 0.2, 0.3]
+                mock_executor.return_value.__enter__.return_value.submit.return_value = mock_future
+                
+                result = embeddings.embed_query("退货")
+                
+                # 验证结果
+                assert result == [0.1, 0.2, 0.3]
+                # 验证使用了 ThreadPoolExecutor
+                mock_executor.assert_called_once()
+
