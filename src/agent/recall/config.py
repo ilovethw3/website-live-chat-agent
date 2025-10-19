@@ -18,7 +18,7 @@ from src.core.config import settings
 def load_recall_config() -> dict[str, Any]:
     """
     从settings加载召回配置
-    
+
     Returns:
         召回配置字典
     """
@@ -43,10 +43,10 @@ def load_recall_config() -> dict[str, Any]:
 def parse_source_weights(weights_str: str) -> dict[str, float]:
     """
     解析权重配置字符串
-    
+
     Args:
         weights_str: 权重配置字符串，格式如 "vector:1.0,faq:0.8"
-        
+
     Returns:
         权重字典
     """
@@ -71,10 +71,10 @@ def parse_source_weights(weights_str: str) -> dict[str, float]:
 def validate_recall_config(config: dict[str, Any]) -> dict[str, bool]:
     """
     验证召回配置的有效性
-    
+
     Args:
         config: 召回配置
-        
+
     Returns:
         验证结果字典
     """
@@ -95,7 +95,7 @@ def validate_recall_config(config: dict[str, Any]) -> dict[str, bool]:
 
     # 验证超时配置
     timeout_ms = config["timeout_ms"]
-    results["timeout_valid"] = 100 <= timeout_ms <= 2000
+    results["timeout_valid"] = 100 <= timeout_ms <= 10000
 
     # 验证重试配置
     retry = config["retry"]

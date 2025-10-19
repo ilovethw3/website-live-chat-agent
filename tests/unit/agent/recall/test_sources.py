@@ -218,12 +218,12 @@ class TestVectorRecallSource:
         """测试异常处理"""
         # Mock embeddings抛出异常
         mock_embeddings.return_value.aembed_query = AsyncMock(side_effect=Exception("Embedding error"))
-        
+
         hits = await vector_source.acquire(recall_request)
-        
+
         # 应该返回空结果而不是抛出异常
         assert len(hits) == 0
-    
+
     @pytest.mark.asyncio
     @patch('src.agent.recall.sources.vector_source.create_embeddings')
     @patch('src.agent.recall.sources.vector_source.milvus_service')
@@ -232,7 +232,7 @@ class TestVectorRecallSource:
         """测试查询截断功能"""
         # Mock embeddings
         mock_embeddings.return_value.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
-        
+
         # Mock milvus service
         mock_milvus.search_knowledge = AsyncMock(return_value=[
             {
@@ -241,24 +241,24 @@ class TestVectorRecallSource:
                 "metadata": {"title": "测试文档"}
             }
         ])
-        
+
         # Mock截断函数
         mock_truncate.return_value = "截断后的查询"
-        
+
         # 使用长查询
         recall_request.query = "这是一个非常长的查询" * 100
-        
+
         hits = await vector_source.acquire(recall_request)
-        
+
         # 验证截断函数被调用
         mock_truncate.assert_called_once_with(
             recall_request.query,
             max_tokens=500  # 默认vector_chunk_size
         )
-        
+
         # 验证embeddings使用截断后的查询
         mock_embeddings.return_value.aembed_query.assert_called_once_with("截断后的查询")
-        
+
         # 验证结果
         assert len(hits) == 1
         assert hits[0].source == "vector"

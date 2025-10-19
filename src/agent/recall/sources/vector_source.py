@@ -30,10 +30,10 @@ class VectorRecallSource(RecallSource):
     async def acquire(self, request: RecallRequest) -> list[RecallHit]:
         """
         执行向量召回
-        
+
         Args:
             request: 召回请求
-            
+
         Returns:
             召回命中结果列表
         """
@@ -45,10 +45,10 @@ class VectorRecallSource(RecallSource):
             # 截断查询文本以避免token限制错误
             # 使用vector_chunk_size作为最大token数，确保不超过嵌入模型的限制
             truncated_query = truncate_text_to_tokens(
-                request.query, 
+                request.query,
                 max_tokens=settings.vector_chunk_size
             )
-            
+
             # 记录截断情况
             if len(truncated_query) < len(request.query):
                 logger.warning(

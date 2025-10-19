@@ -68,16 +68,27 @@ async def test_retrieve_knowledge(mock_embeddings):
         "session_id": "test-123",
     }
 
-    # Mock search_knowledge_for_agent function return value
-    mock_results = [
-        {
-            "text": "30天内可以无条件退货",
-            "score": 0.9,
-            "metadata": {"source": "policy.md", "title": "退货政策"},
-        }
-    ]
+    # Mock recall agent result
+    from src.agent.recall.schema import RecallHit, RecallResult
 
-    with patch("src.agent.nodes.search_knowledge_for_agent", return_value=mock_results):
+    mock_hit = RecallHit(
+        source="vector",
+        score=0.9,
+        confidence=0.8,
+        reason="向量相似度匹配",
+        content="30天内可以无条件退货",
+        metadata={"source": "policy.md", "title": "退货政策"}
+    )
+
+    mock_recall_result = RecallResult(
+        hits=[mock_hit],
+        latency_ms=100.0,
+        degraded=False,
+        trace_id="test-trace",
+        experiment_id=None
+    )
+
+    with patch("src.agent.recall.graph.invoke_recall_agent", return_value=mock_recall_result):
         result = await retrieve_node(state)
 
         assert "retrieved_docs" in result
@@ -201,14 +212,31 @@ def test_is_valid_user_query_starts_with_instructions():
         assert not _is_valid_user_query(query), f"Instruction start query should be filtered: {query}"
 
 
-@patch("src.agent.nodes.search_knowledge_for_agent")
+@patch("src.agent.recall.graph.invoke_recall_agent")
 @pytest.mark.asyncio
-async def test_retrieve_node_filters_instruction_templates(mock_search):
+async def test_retrieve_node_filters_instruction_templates(mock_recall_agent):
     """测试retrieve_node处理指令模板（现在在API层过滤，这里测试正常检索）"""
-    # 模拟检索结果
-    mock_search.return_value = [
-        {"text": "测试文档", "score": 0.8, "metadata": {"title": "测试"}}
-    ]
+    # Mock recall agent result
+    from src.agent.recall.schema import RecallHit, RecallResult
+
+    mock_hit = RecallHit(
+        source="vector",
+        score=0.8,
+        confidence=0.7,
+        reason="向量相似度匹配",
+        content="测试文档",
+        metadata={"title": "测试"}
+    )
+
+    mock_recall_result = RecallResult(
+        hits=[mock_hit],
+        latency_ms=100.0,
+        degraded=False,
+        trace_id="test-trace",
+        experiment_id=None
+    )
+
+    mock_recall_agent.return_value = mock_recall_result
 
     # 模拟指令模板消息（现在会通过API层过滤，但这里测试retrieve_node的正常行为）
     instruction_template = "You are an AI question rephraser. Your role is to rephrase follow-up queries from a conversation into standalone queries that can be used by another LLM to retrieve information through web search."
@@ -225,13 +253,35 @@ async def test_retrieve_node_filters_instruction_templates(mock_search):
     # 现在retrieve_node会正常执行检索（过滤在API层进行）
     assert len(result["retrieved_docs"]) > 0
     assert result["confidence_score"] == 0.8
-    mock_search.assert_called_once()
+    mock_recall_agent.assert_called_once()
 
 
-@patch("src.agent.nodes.search_knowledge_for_agent")
+@patch("src.agent.recall.graph.invoke_recall_agent")
 @pytest.mark.asyncio
-async def test_retrieve_node_allows_valid_queries(mock_search):
+async def test_retrieve_node_allows_valid_queries(mock_recall_agent):
     """测试retrieve_node允许有效查询"""
+    # Mock recall agent result
+    from src.agent.recall.schema import RecallHit, RecallResult
+
+    mock_hit = RecallHit(
+        source="vector",
+        score=0.9,
+        confidence=0.8,
+        reason="向量相似度匹配",
+        content="我们的产品功能包括智能客服、知识库检索等",
+        metadata={"source": "product.md", "title": "产品功能"}
+    )
+
+    mock_recall_result = RecallResult(
+        hits=[mock_hit],
+        latency_ms=100.0,
+        degraded=False,
+        trace_id="test-trace",
+        experiment_id=None
+    )
+
+    mock_recall_agent.return_value = mock_recall_result
+
     # 模拟有效用户查询
     valid_query = "你们的产品有哪些功能？"
 
@@ -242,32 +292,39 @@ async def test_retrieve_node_allows_valid_queries(mock_search):
         "session_id": "test-123",
     }
 
-    # 模拟搜索结果
-    mock_results = [
-        {
-            "text": "我们的产品功能包括智能客服、知识库检索等",
-            "score": 0.9,
-            "metadata": {"source": "product.md", "title": "产品功能"},
-        }
-    ]
-    mock_search.return_value = mock_results
-
     result = await retrieve_node(state)
 
-    # 应该调用search_knowledge_for_agent并返回结果
-    mock_search.assert_called_once_with(valid_query, top_k=3)
+    # 应该调用recall agent并返回结果
+    mock_recall_agent.assert_called_once()
     assert len(result["retrieved_docs"]) > 0
     assert result["confidence_score"] == 0.9
 
 
-@patch("src.agent.nodes.search_knowledge_for_agent")
+@patch("src.agent.recall.graph.invoke_recall_agent")
 @pytest.mark.asyncio
-async def test_retrieve_node_mixed_scenario(mock_search):
+async def test_retrieve_node_mixed_scenario(mock_recall_agent):
     """测试混合场景：指令模板+真实问题（现在在API层过滤，这里测试正常检索）"""
-    # 模拟检索结果
-    mock_search.return_value = [
-        {"text": "测试文档", "score": 0.8, "metadata": {"title": "测试"}}
-    ]
+    # Mock recall agent result
+    from src.agent.recall.schema import RecallHit, RecallResult
+
+    mock_hit = RecallHit(
+        source="vector",
+        score=0.8,
+        confidence=0.7,
+        reason="向量相似度匹配",
+        content="测试文档",
+        metadata={"title": "测试"}
+    )
+
+    mock_recall_result = RecallResult(
+        hits=[mock_hit],
+        latency_ms=100.0,
+        degraded=False,
+        trace_id="test-trace",
+        experiment_id=None
+    )
+
+    mock_recall_agent.return_value = mock_recall_result
 
     # 模拟包含指令模板和真实问题的混合消息（现在会通过API层过滤）
     mixed_message = """You are an AI question rephraser. Your role is to rephrase follow-up queries from a conversation into standalone queries that can be used by another LLM to retrieve information through web search.
@@ -286,7 +343,7 @@ Please rephrase the following query: 你们的产品有哪些功能？"""
     # 现在retrieve_node会正常执行检索（过滤在API层进行）
     assert len(result["retrieved_docs"]) > 0
     assert result["confidence_score"] == 0.8
-    mock_search.assert_called_once()
+    mock_recall_agent.assert_called_once()
 
 
 def test_is_valid_user_query_configuration():

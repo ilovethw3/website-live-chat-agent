@@ -10,7 +10,6 @@
 """
 
 import logging
-from typing import Any
 
 from langgraph.graph import StateGraph
 
@@ -22,6 +21,7 @@ from src.agent.recall.nodes import (
     prepare_node,
 )
 from src.agent.recall.schema import RecallRequest, RecallResult
+from src.agent.recall.state import RecallState
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +29,10 @@ logger = logging.getLogger(__name__)
 def create_recall_graph() -> StateGraph:
     """
     创建召回Agent LangGraph子图
-    
+
     Returns:
         编译后的召回Agent图
     """
-    # 定义状态类型
-    RecallState = dict[str, Any]
-
     # 创建状态图
     workflow = StateGraph(RecallState)
 
@@ -70,10 +67,10 @@ recall_agent = create_recall_graph()
 async def invoke_recall_agent(request: RecallRequest) -> RecallResult:
     """
     调用召回Agent的便捷接口
-    
+
     Args:
         request: 召回请求
-        
+
     Returns:
         召回结果
     """

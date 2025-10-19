@@ -71,10 +71,10 @@ class KeywordRecallSource(RecallSource):
     async def acquire(self, request: RecallRequest) -> list[RecallHit]:
         """
         执行关键词召回
-        
+
         Args:
             request: 召回请求
-            
+
         Returns:
             召回命中结果列表
         """
@@ -124,11 +124,11 @@ class KeywordRecallSource(RecallSource):
     def _calculate_keyword_score(self, query: str, rule: dict[str, Any]) -> float:
         """
         计算关键词匹配分数
-        
+
         Args:
             query: 查询文本
             rule: 规则配置
-            
+
         Returns:
             匹配分数 (0-1)
         """

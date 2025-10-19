@@ -52,9 +52,9 @@ class TestRecallAgentPerformance:
                 trace_id=f"trace-{i}"
             )
 
-            start_time = time.time()
+            time.time()
             result = await invoke_recall_agent(recall_request)
-            end_time = time.time()
+            time.time()
 
             # 验证结果
             assert isinstance(result, RecallResult)

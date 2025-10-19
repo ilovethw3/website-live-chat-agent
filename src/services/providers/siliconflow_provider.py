@@ -67,7 +67,7 @@ class SiliconFlowEmbeddings(Embeddings):
         """嵌入文档列表"""
         try:
             # 检查是否已经在事件循环中
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
             # 如果已经在事件循环中，使用 run_in_executor 在单独线程中运行
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -81,7 +81,7 @@ class SiliconFlowEmbeddings(Embeddings):
         """嵌入查询文本"""
         try:
             # 检查是否已经在事件循环中
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
             # 如果已经在事件循环中，使用 run_in_executor 在单独线程中运行
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor() as executor:

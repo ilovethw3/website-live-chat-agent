@@ -17,6 +17,27 @@ from src.agent.recall.nodes import (
 from src.agent.recall.schema import RecallHit, RecallRequest, RecallResult
 
 
+@pytest.fixture
+def recall_state():
+    """创建测试用的RecallState"""
+    return {
+        "request": RecallRequest(
+            query="test query",
+            session_id="test-session",
+            trace_id="test-trace",
+        ),
+        "config": {
+            "sources": ["vector"],
+            "weights": {"vector": 1.0},
+            "timeout_ms": 500,
+            "retry": 1,
+        },
+        "start_time": 1234567890.0,
+        "hits": [],
+        "result": None,
+    }
+
+
 class TestPrepareNode:
     """测试prepare_node"""
 
@@ -133,11 +154,11 @@ class TestFanoutNode:
 
         result = await fanout_node(state)
 
-        assert "source_results" in result
-        assert "vector" in result["source_results"]
-        assert "faq" in result["source_results"]
-        assert len(result["source_results"]["vector"]) == 1
-        assert len(result["source_results"]["faq"]) == 1
+        assert "hits" in result
+        assert len(result["hits"]) == 2
+        sources = [hit.source for hit in result["hits"]]
+        assert "vector" in sources
+        assert "faq" in sources
 
     @pytest.mark.asyncio
     async def test_fanout_node_timeout(self, mock_sources):
@@ -161,9 +182,8 @@ class TestFanoutNode:
 
         result = await fanout_node(state)
 
-        assert "source_results" in result
-        assert "vector" in result["source_results"]
-        assert len(result["source_results"]["vector"]) == 0
+        assert "hits" in result
+        assert len(result["hits"]) == 0
 
 
 class TestMergeNode:
@@ -195,8 +215,13 @@ class TestMergeNode:
             ]
         }
 
+        # 合并所有hits
+        all_hits = []
+        for hits in source_results.values():
+            all_hits.extend(hits)
+
         state = {
-            "source_results": source_results,
+            "hits": all_hits,
             "config": {
                 "weights": {"vector": 1.0, "faq": 0.8}
             },
@@ -210,10 +235,10 @@ class TestMergeNode:
 
         result = await merge_node(state)
 
-        assert "merged_hits" in result
-        assert len(result["merged_hits"]) == 2
+        assert "hits" in result
+        assert len(result["hits"]) == 2
         # 应该按分数排序
-        assert result["merged_hits"][0].score >= result["merged_hits"][1].score
+        assert result["hits"][0].score >= result["hits"][1].score
 
     @pytest.mark.asyncio
     async def test_merge_node_with_weights(self):
@@ -241,8 +266,13 @@ class TestMergeNode:
             ]
         }
 
+        # 合并所有hits
+        all_hits = []
+        for hits in source_results.values():
+            all_hits.extend(hits)
+
         state = {
-            "source_results": source_results,
+            "hits": all_hits,
             "config": {
                 "weights": {"vector": 1.0, "faq": 0.5}  # FAQ权重更低
             },
@@ -256,13 +286,13 @@ class TestMergeNode:
 
         result = await merge_node(state)
 
-        assert "merged_hits" in result
-        assert len(result["merged_hits"]) == 2
+        assert "hits" in result
+        assert len(result["hits"]) == 2
         # vector应该排在前面（权重更高）
-        assert result["merged_hits"][0].source == "vector"
-        assert result["merged_hits"][0].score == 0.5  # 1.0 * 0.5
-        assert result["merged_hits"][1].source == "faq"
-        assert result["merged_hits"][1].score == 0.25  # 0.5 * 0.5
+        assert result["hits"][0].source == "vector"
+        assert result["hits"][0].score == 0.5  # 1.0 * 0.5
+        assert result["hits"][1].source == "faq"
+        assert result["hits"][1].score == 0.25  # 0.5 * 0.5
 
 
 class TestFallbackNode:
@@ -283,7 +313,7 @@ class TestFallbackNode:
         ]
 
         state = {
-            "merged_hits": merged_hits,
+            "hits": merged_hits,
             "config": {
                 "degrade_threshold": 0.5,
                 "fallback_enabled": True
@@ -292,8 +322,9 @@ class TestFallbackNode:
 
         result = await fallback_node(state)
 
-        assert result["degraded"] is False
-        assert result["merged_hits"] == merged_hits
+        # fallback_node不更新任何字段时返回空字典
+        assert result == {}
+        # 不需要降级时，fallback_node不更新任何字段
 
     @pytest.mark.asyncio
     async def test_fallback_node_low_score(self):
@@ -310,7 +341,7 @@ class TestFallbackNode:
         ]
 
         state = {
-            "merged_hits": merged_hits,
+            "hits": merged_hits,
             "config": {
                 "degrade_threshold": 0.5,
                 "fallback_enabled": True
@@ -319,15 +350,15 @@ class TestFallbackNode:
 
         result = await fallback_node(state)
 
-        assert result["degraded"] is True
-        assert len(result["merged_hits"]) == 1
-        assert result["merged_hits"][0].source == "fallback"
+        # 降级时返回fallback hits
+        assert len(result["hits"]) == 1
+        assert result["hits"][0].source == "fallback"
 
     @pytest.mark.asyncio
     async def test_fallback_node_empty_results(self):
         """测试空结果降级"""
         state = {
-            "merged_hits": [],
+            "hits": [],
             "config": {
                 "degrade_threshold": 0.5,
                 "fallback_enabled": True
@@ -336,15 +367,15 @@ class TestFallbackNode:
 
         result = await fallback_node(state)
 
-        assert result["degraded"] is True
-        assert len(result["merged_hits"]) == 1
-        assert result["merged_hits"][0].source == "fallback"
+        # 空结果时返回fallback hits
+        assert len(result["hits"]) == 1
+        assert result["hits"][0].source == "fallback"
 
     @pytest.mark.asyncio
     async def test_fallback_node_disabled(self):
         """测试降级功能关闭"""
         state = {
-            "merged_hits": [],
+            "hits": [],
             "config": {
                 "degrade_threshold": 0.5,
                 "fallback_enabled": False  # 关闭降级
@@ -353,8 +384,8 @@ class TestFallbackNode:
 
         result = await fallback_node(state)
 
-        assert result["degraded"] is False
-        assert result["merged_hits"] == []
+        # fallback_node不更新任何字段时返回空字典
+        assert result == {}
 
 
 class TestOutputNode:
@@ -380,8 +411,7 @@ class TestOutputNode:
                 session_id="session-123",
                 trace_id="trace-456"
             ),
-            "merged_hits": merged_hits,
-            "degraded": False,
+            "hits": merged_hits,
             "start_time": 1000.0
         }
 

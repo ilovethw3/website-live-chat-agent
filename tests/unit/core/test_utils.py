@@ -103,3 +103,4 @@ def test_chunk_text_for_embedding_fallback():
         assert all(len(chunk) <= 20 for chunk in chunks)  # 10 tokens * 2 chars per token
 
 
+

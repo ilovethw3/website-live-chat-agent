@@ -16,10 +16,10 @@ class RecallSource(ABC):
     async def acquire(self, request: RecallRequest) -> list[RecallHit]:
         """
         执行召回
-        
+
         Args:
             request: 召回请求
-            
+
         Returns:
             召回命中结果列表
         """
@@ -30,7 +30,7 @@ class RecallSource(ABC):
     def source_name(self) -> str:
         """
         召回源名称
-        
+
         Returns:
             召回源名称
         """

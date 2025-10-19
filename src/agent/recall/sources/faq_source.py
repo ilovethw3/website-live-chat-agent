@@ -57,10 +57,10 @@ class FAQRecallSource(RecallSource):
     async def acquire(self, request: RecallRequest) -> list[RecallHit]:
         """
         执行FAQ召回
-        
+
         Args:
             request: 召回请求
-            
+
         Returns:
             召回命中结果列表
         """
@@ -110,11 +110,11 @@ class FAQRecallSource(RecallSource):
     def _calculate_faq_score(self, query: str, faq: dict[str, Any]) -> float:
         """
         计算FAQ匹配分数
-        
+
         Args:
             query: 查询文本
             faq: FAQ数据
-            
+
         Returns:
             匹配分数 (0-1)
         """

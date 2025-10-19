@@ -67,7 +67,7 @@ def chunk_text_for_embedding(text: str, max_tokens: int = 512) -> List[str]:
 def generate_trace_id() -> str:
     """
     生成唯一的追踪ID
-    
+
     Returns:
         格式为 "trace-{uuid4}" 的追踪ID
     """

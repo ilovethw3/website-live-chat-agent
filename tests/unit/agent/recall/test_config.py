@@ -15,7 +15,7 @@ class TestLoadRecallConfig:
         """测试基础配置加载"""
         mock_settings.recall_sources = ["vector", "faq"]
         mock_settings.recall_source_weights = "vector:1.0,faq:0.8"
-        mock_settings.recall_timeout_ms = 500
+        mock_settings.recall_timeout_ms = 3000
         mock_settings.recall_retry = 1
         mock_settings.recall_merge_strategy = "weighted"
         mock_settings.recall_degrade_threshold = 0.5
@@ -28,7 +28,7 @@ class TestLoadRecallConfig:
         assert config["sources"] == ["vector", "faq"]
         assert config["weights"]["vector"] == 1.0
         assert config["weights"]["faq"] == 0.8
-        assert config["timeout_ms"] == 500
+        assert config["timeout_ms"] == 3000
         assert config["retry"] == 1
         assert config["merge_strategy"] == "weighted"
         assert config["degrade_threshold"] == 0.5
@@ -41,7 +41,7 @@ class TestLoadRecallConfig:
         """测试实验配置"""
         mock_settings.recall_sources = ["vector"]
         mock_settings.recall_source_weights = "vector:1.0"
-        mock_settings.recall_timeout_ms = 500
+        mock_settings.recall_timeout_ms = 3000
         mock_settings.recall_retry = 1
         mock_settings.recall_merge_strategy = "weighted"
         mock_settings.recall_degrade_threshold = 0.5
@@ -109,7 +109,7 @@ class TestValidateRecallConfig:
         config = {
             "sources": ["vector", "faq"],
             "weights": {"vector": 1.0, "faq": 0.8},
-            "timeout_ms": 500,
+            "timeout_ms": 3000,
             "retry": 1,
             "degrade_threshold": 0.5
         }
@@ -126,7 +126,7 @@ class TestValidateRecallConfig:
         config = {
             "sources": ["vector", "invalid_source"],
             "weights": {"vector": 1.0},
-            "timeout_ms": 500,
+            "timeout_ms": 3000,
             "retry": 1,
             "degrade_threshold": 0.5
         }
@@ -155,7 +155,7 @@ class TestValidateRecallConfig:
         config = {
             "sources": ["vector"],
             "weights": {"vector": 1.0},
-            "timeout_ms": 500,
+            "timeout_ms": 3000,
             "retry": 5,  # 超过最大值
             "degrade_threshold": 0.5
         }
@@ -169,7 +169,7 @@ class TestValidateRecallConfig:
         config = {
             "sources": ["vector"],
             "weights": {"vector": 1.0},
-            "timeout_ms": 500,
+            "timeout_ms": 3000,
             "retry": 1,
             "degrade_threshold": 1.5  # 超过最大值
         }
@@ -183,12 +183,12 @@ class TestValidateRecallConfig:
         config = {
             "sources": ["vector", "faq"],
             "weights": {"vector": 1.0},  # 缺少faq权重
-            "timeout_ms": 500,
+            "timeout_ms": 3000,
             "retry": 1,
             "degrade_threshold": 0.5
         }
 
-        results = validate_recall_config(config)
+        validate_recall_config(config)
 
         # 应该为缺失的源设置默认权重
         assert "faq" in config["weights"]

@@ -337,7 +337,7 @@ class TestIssue41SiliconFlowEmbeddingFix:
         )
 
         # 模拟异步方法返回结果
-        with patch.object(embeddings, 'aembed_query', return_value=[0.1, 0.2, 0.3]) as mock_aembed:
+        with patch.object(embeddings, 'aembed_query', return_value=[0.1, 0.2, 0.3]):
             # 模拟在事件循环中调用同步方法
             with patch('asyncio.get_running_loop') as mock_get_loop:
                 # 模拟已有事件循环
@@ -365,7 +365,7 @@ class TestIssue41SiliconFlowEmbeddingFix:
         )
 
         # 模拟异步方法返回结果
-        with patch.object(embeddings, 'aembed_query', return_value=[0.1, 0.2, 0.3]) as mock_aembed:
+        with patch.object(embeddings, 'aembed_query', return_value=[0.1, 0.2, 0.3]):
             # 模拟没有事件循环
             with patch('asyncio.get_running_loop', side_effect=RuntimeError("No running event loop")):
                 with patch('asyncio.run') as mock_asyncio_run:
@@ -393,7 +393,7 @@ class TestIssue41SiliconFlowEmbeddingFix:
         )
 
         # 模拟异步方法返回结果
-        with patch.object(embeddings, 'aembed_query', return_value=[0.1, 0.2, 0.3]) as mock_aembed:
+        with patch.object(embeddings, 'aembed_query', return_value=[0.1, 0.2, 0.3]):
             # 在异步上下文中调用同步方法
             with patch('concurrent.futures.ThreadPoolExecutor') as mock_executor:
                 mock_future = Mock()

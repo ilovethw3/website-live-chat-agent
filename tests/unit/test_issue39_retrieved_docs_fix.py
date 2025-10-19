@@ -186,9 +186,30 @@ class TestIssue39RetrievedDocsFix:
             }
         ]
 
-        with patch("src.agent.nodes.search_knowledge_for_agent") as mock_search:
-            mock_search.return_value = mock_results
+        # Mock recall agent result
+        from src.agent.recall.schema import RecallHit, RecallResult
 
+        mock_hits = []
+        for i, mock_result in enumerate(mock_results, 1):
+            hit = RecallHit(
+                source="vector",
+                score=mock_result["score"],
+                confidence=0.8,
+                reason="向量相似度匹配",
+                content=mock_result["text"],
+                metadata=mock_result["metadata"]
+            )
+            mock_hits.append(hit)
+
+        mock_recall_result = RecallResult(
+            hits=mock_hits,
+            latency_ms=100.0,
+            degraded=False,
+            trace_id="test-trace",
+            experiment_id=None
+        )
+
+        with patch("src.agent.recall.graph.invoke_recall_agent", return_value=mock_recall_result):
             # 调用retrieve_node
             result = await retrieve_node(state)
 
@@ -227,9 +248,27 @@ class TestIssue39RetrievedDocsFix:
             }
         ]
 
-        with patch("src.agent.nodes.search_knowledge_for_agent") as mock_search:
-            mock_search.return_value = mock_results
+        # Mock recall agent result
+        from src.agent.recall.schema import RecallHit, RecallResult
 
+        mock_hit = RecallHit(
+            source="vector",
+            score=mock_results[0]["score"],
+            confidence=0.8,
+            reason="向量相似度匹配",
+            content=mock_results[0]["text"],
+            metadata=mock_results[0]["metadata"]
+        )
+
+        mock_recall_result = RecallResult(
+            hits=[mock_hit],
+            latency_ms=100.0,
+            degraded=False,
+            trace_id="test-trace",
+            experiment_id=None
+        )
+
+        with patch("src.agent.recall.graph.invoke_recall_agent", return_value=mock_recall_result):
             # 第一步：检索文档
             retrieve_result = await retrieve_node(state)
 
