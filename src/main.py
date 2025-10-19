@@ -19,7 +19,7 @@ from src.core.exceptions import AppException
 # 配置日志
 logging.basicConfig(
     level=getattr(logging, settings.log_level),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 预编译 LangGraph App
     try:
-        from src.agent.graph import get_agent_app
+        from src.agent.main.graph import get_agent_app
         get_agent_app()
         logger.info("✅ LangGraph Agent compiled successfully")
     except Exception as e:

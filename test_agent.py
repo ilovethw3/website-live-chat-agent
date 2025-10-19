@@ -12,7 +12,7 @@ import logging
 
 from langchain_core.messages import HumanMessage
 
-from src.agent.graph import get_agent_app
+from src.agent.main.graph import get_agent_app
 
 # 配置日志
 logging.basicConfig(

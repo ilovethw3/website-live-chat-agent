@@ -9,7 +9,6 @@
 
 import os
 from typing import Generator
-from unittest.mock import AsyncMock, MagicMock
 
 import fakeredis.aioredis
 import pytest
@@ -66,27 +65,27 @@ def test_client() -> Generator[TestClient, None, None]:
 
 
 @pytest.fixture
-def mock_milvus_collection():
+def mock_milvus_collection(mocker):
     """Mock Milvus Collection"""
-    mock = MagicMock()
+    mock = mocker.MagicMock()
     mock.search.return_value = [[]]  # 空搜索结果
-    mock.insert.return_value = MagicMock(insert_count=1)
+    mock.insert.return_value = mocker.MagicMock(insert_count=1)
     mock.query.return_value = []
     mock.num_entities = 0
     return mock
 
 
 @pytest.fixture
-async def mock_milvus_service(mock_milvus_collection):
+async def mock_milvus_service(mock_milvus_collection, mocker):
     """Mock Milvus 服务"""
-    mock = AsyncMock()
+    mock = mocker.AsyncMock()
     mock.knowledge_collection = mock_milvus_collection
     mock.history_collection = mock_milvus_collection
     mock.search.return_value = []
     mock.insert_documents.return_value = {"success": True, "inserted_count": 1}
     mock.health_check.return_value = True
-    mock.initialize = AsyncMock()
-    mock.close = AsyncMock()
+    mock.initialize = mocker.AsyncMock()
+    mock.close = mocker.AsyncMock()
     return mock
 
 
@@ -97,22 +96,22 @@ def mock_redis():
 
 
 @pytest.fixture
-def mock_llm():
+def mock_llm(mocker):
     """Mock LLM"""
-    mock = MagicMock()
+    mock = mocker.MagicMock()
     mock.invoke.return_value = AIMessage(content="这是一个测试响应")
-    mock.ainvoke = AsyncMock(return_value=AIMessage(content="这是一个异步测试响应"))
+    mock.ainvoke = mocker.AsyncMock(return_value=AIMessage(content="这是一个异步测试响应"))
     mock.model_name = "deepseek-chat"
     return mock
 
 
 @pytest.fixture
-def mock_embeddings():
+def mock_embeddings(mocker):
     """Mock Embeddings 模型"""
-    mock = MagicMock()
+    mock = mocker.MagicMock()
     mock.embed_query.return_value = [0.1] * 1536
     mock.embed_documents.return_value = [[0.1] * 1536]
-    mock.aembed_query = AsyncMock(return_value=[0.1] * 1536)
+    mock.aembed_query = mocker.AsyncMock(return_value=[0.1] * 1536)
     return mock
 
 

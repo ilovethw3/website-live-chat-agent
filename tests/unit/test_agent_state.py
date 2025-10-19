@@ -6,7 +6,7 @@
 
 from langchain_core.messages import AIMessage, HumanMessage
 
-from src.agent.state import AgentState
+from src.agent.main.state import AgentState
 
 
 def test_agent_state_structure():

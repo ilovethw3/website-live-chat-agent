@@ -25,7 +25,7 @@ QA 角色在发现 Bug 后，应遵循标准化流程将问题提交到 GitHub I
 
 1. 复制 Bug 模板：
    ```bash
-   cp docs/qa/ISSUE-BUG-TEMPLATE.md /tmp/bug-report.md
+   cp .cursor/rules/ISSUE-BUG-TEMPLATE.md /tmp/bug-report.md
    ```
 
 2. 填写完整的 Bug 信息（参考模板结构）：
@@ -108,7 +108,7 @@ rm /tmp/bug-report.md
 
 ## Bug 模板位置
 
-- **模板文件**：[docs/qa/ISSUE-BUG-TEMPLATE.md](mdc:docs/qa/ISSUE-BUG-TEMPLATE.md)
+- **模板文件**：[.cursor/rules/ISSUE-BUG-TEMPLATE.md](mdc:.cursor/rules/ISSUE-BUG-TEMPLATE.md)
 - 包含完整的字段说明和示例
 
 ## QA 职责边界
@@ -125,7 +125,8 @@ rm /tmp/bug-report.md
 
 - **修改源代码** (`src/` 目录)
 - **修复 Bug**（这是 LD 的职责）
-- 直接关闭 Issue（需要 LD 修复并验证后才能关闭）
+- **直接关闭 Issue**（需要 LD 修复并验证后才能关闭）
+- **不要给出修复建议**
 
 ## Git 工作流整合
 
@@ -162,9 +163,8 @@ gh issue status
 
 1. **标题清晰**：一眼看出是什么问题
 2. **复现步骤完整**：LD 必须能根据步骤重现问题
-3. **提供修复方案**：展示 QA 对代码的理解
-4. **及时更新**：如有新发现，在 Issue 中添加评论
-5. **关联相关 Issue**：使用 `#issue-number` 语法
+3. **及时更新**：如有新发现，在 Issue 中添加评论
+4. **关联相关 Issue**：使用 `#issue-number` 语法
 
 ## 示例
 

@@ -6,7 +6,7 @@ LangGraph Agent 条件边
 
 import logging
 
-from src.agent.state import AgentState
+from src.agent.main.state import AgentState
 
 logger = logging.getLogger(__name__)
 

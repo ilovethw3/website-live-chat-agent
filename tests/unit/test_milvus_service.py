@@ -156,16 +156,16 @@ async def test_milvus_search_with_score_threshold(mock_embeddings):
     service = MilvusService()
     service.knowledge_collection = MagicMock()
 
-    # Mock 搜索结果，包含不同分数
+    # Mock 搜索结果，包含不同COSINE距离值（越小越相似）
     mock_hit_high = MagicMock()
-    mock_hit_high.score = 0.95  # 高分数
+    mock_hit_high.score = 0.1  # COSINE距离：0.1（很相似，转换为相似度=0.95）
     mock_hit_high.entity.get = lambda key: {
         "text": "高相关文档",
         "metadata": {},
     }.get(key)
 
     mock_hit_low = MagicMock()
-    mock_hit_low.score = 0.5  # 低分数
+    mock_hit_low.score = 1.0  # COSINE距离：1.0（不太相似，转换为相似度=0.5）
     mock_hit_low.entity.get = lambda key: {
         "text": "低相关文档",
         "metadata": {},
@@ -183,6 +183,7 @@ async def test_milvus_search_with_score_threshold(mock_embeddings):
     # 结果应该被过滤，只保留高分文档
     assert isinstance(results, list)
     assert len(results) == 1
+    # 距离0.1转换为相似度 = 1.0 - (0.1/2.0) = 0.95
     assert results[0]["score"] == 0.95
 
 
@@ -192,4 +193,49 @@ def test_milvus_singleton():
     from src.services.milvus_service import milvus_service as service2
 
     assert service1 is service2
+
+
+@pytest.mark.asyncio
+async def test_milvus_search_score_is_similarity_not_distance():
+    """测试返回的 score 是相似度而非距离（Issue #30 修复验证）"""
+    service = MilvusService()
+    service.knowledge_collection = MagicMock()
+
+    # Mock 搜索结果：COSINE距离值（越小越相似）
+    mock_hit_1 = MagicMock()
+    mock_hit_1.score = 0.2  # COSINE距离：0.2（很相似）
+    mock_hit_1.entity.get = lambda key: {
+        "text": "相似文档1",
+        "metadata": {"source": "doc1.md"},
+    }.get(key)
+
+    mock_hit_2 = MagicMock()
+    mock_hit_2.score = 1.5  # COSINE距离：1.5（不太相似）
+    mock_hit_2.entity.get = lambda key: {
+        "text": "不太相似文档2",
+        "metadata": {"source": "doc2.md"},
+    }.get(key)
+
+    mock_result = [[mock_hit_1, mock_hit_2]]
+    service.knowledge_collection.search.return_value = mock_result
+
+    query_embedding = [0.1] * 768
+    results = await service.search_knowledge(query_embedding=query_embedding, top_k=2)
+
+    # 验证返回的 score 是相似度（0-1范围，越大越相似）
+    # 注意：第二个结果可能被阈值过滤掉，因为相似度0.25 < 默认阈值0.7
+    assert len(results) >= 1  # 至少有一个结果
+
+    # 第一个结果：距离0.2 -> 相似度 = 1.0 - (0.2/2.0) = 0.9
+    assert results[0]["score"] == 0.9
+    assert 0 <= results[0]["score"] <= 1  # 相似度在[0,1]范围内
+
+    # 如果第二个结果通过了阈值过滤，验证其相似度
+    if len(results) > 1:
+        # 第二个结果：距离1.5 -> 相似度 = 1.0 - (1.5/2.0) = 0.25
+        assert results[1]["score"] == 0.25
+        assert 0 <= results[1]["score"] <= 1  # 相似度在[0,1]范围内
+
+        # 验证相似度语义：第一个结果比第二个更相似
+        assert results[0]["score"] > results[1]["score"]
 
