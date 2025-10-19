@@ -2,8 +2,6 @@
 召回节点单元测试
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 
 from src.agent.recall.nodes import (
@@ -42,19 +40,19 @@ class TestPrepareNode:
     """测试prepare_node"""
 
     @pytest.fixture
-    def mock_settings(self):
+    def mock_settings(self, mocker):
         """Mock settings"""
-        with patch('src.agent.recall.nodes.settings') as mock:
-            mock.recall_sources = ["vector", "faq"]
-            mock.recall_source_weights = "vector:1.0,faq:0.8"
-            mock.recall_timeout_ms = 500
-            mock.recall_retry = 1
-            mock.recall_merge_strategy = "weighted"
-            mock.recall_degrade_threshold = 0.5
-            mock.recall_fallback_enabled = True
-            mock.recall_experiment_enabled = False
-            mock.recall_experiment_platform = None
-            yield mock
+        mock = mocker.patch('src.agent.recall.nodes.settings')
+        mock.recall_sources = ["vector", "faq"]
+        mock.recall_source_weights = "vector:1.0,faq:0.8"
+        mock.recall_timeout_ms = 500
+        mock.recall_retry = 1
+        mock.recall_merge_strategy = "weighted"
+        mock.recall_degrade_threshold = 0.5
+        mock.recall_fallback_enabled = True
+        mock.recall_experiment_enabled = False
+        mock.recall_experiment_platform = None
+        return mock
 
     @pytest.mark.asyncio
     async def test_prepare_node_basic(self, mock_settings):
@@ -99,40 +97,40 @@ class TestFanoutNode:
     """测试fanout_node"""
 
     @pytest.fixture
-    def mock_sources(self):
+    def mock_sources(self, mocker):
         """Mock召回源"""
-        with patch('src.agent.recall.nodes.VectorRecallSource') as mock_vector, \
-             patch('src.agent.recall.nodes.FAQRecallSource') as mock_faq:
+        mock_vector = mocker.patch('src.agent.recall.nodes.VectorRecallSource')
+        mock_faq = mocker.patch('src.agent.recall.nodes.FAQRecallSource')
 
-            # Mock向量召回源
-            mock_vector_instance = MagicMock()
-            mock_vector_instance.acquire = AsyncMock(return_value=[
-                RecallHit(
-                    source="vector",
-                    score=0.85,
-                    confidence=0.82,
-                    reason="向量匹配",
-                    content="向量内容",
-                    metadata={}
-                )
-            ])
-            mock_vector.return_value = mock_vector_instance
+        # Mock向量召回源
+        mock_vector_instance = mocker.MagicMock()
+        mock_vector_instance.acquire = mocker.AsyncMock(return_value=[
+            RecallHit(
+                source="vector",
+                score=0.85,
+                confidence=0.82,
+                reason="向量匹配",
+                content="向量内容",
+                metadata={}
+            )
+        ])
+        mock_vector.return_value = mock_vector_instance
 
-            # Mock FAQ召回源
-            mock_faq_instance = MagicMock()
-            mock_faq_instance.acquire = AsyncMock(return_value=[
-                RecallHit(
-                    source="faq",
-                    score=0.75,
-                    confidence=0.70,
-                    reason="FAQ匹配",
-                    content="FAQ内容",
-                    metadata={}
-                )
-            ])
-            mock_faq.return_value = mock_faq_instance
+        # Mock FAQ召回源
+        mock_faq_instance = mocker.MagicMock()
+        mock_faq_instance.acquire = mocker.AsyncMock(return_value=[
+            RecallHit(
+                source="faq",
+                score=0.75,
+                confidence=0.70,
+                reason="FAQ匹配",
+                content="FAQ内容",
+                metadata={}
+            )
+        ])
+        mock_faq.return_value = mock_faq_instance
 
-            yield mock_vector_instance, mock_faq_instance
+        return mock_vector_instance, mock_faq_instance
 
     @pytest.mark.asyncio
     async def test_fanout_node_success(self, mock_sources):
@@ -161,10 +159,10 @@ class TestFanoutNode:
         assert "faq" in sources
 
     @pytest.mark.asyncio
-    async def test_fanout_node_timeout(self, mock_sources):
+    async def test_fanout_node_timeout(self, mocker, mock_sources):
         """测试超时处理"""
         # Mock超时异常
-        mock_sources[0].acquire = AsyncMock(side_effect=TimeoutError("Timeout"))
+        mock_sources[0].acquire = mocker.AsyncMock(side_effect=TimeoutError("Timeout"))
 
         request = RecallRequest(
             query="测试查询",
@@ -392,7 +390,7 @@ class TestOutputNode:
     """测试output_node"""
 
     @pytest.mark.asyncio
-    async def test_output_node_basic(self):
+    async def test_output_node_basic(self, mocker):
         """测试基础输出"""
         merged_hits = [
             RecallHit(
@@ -415,8 +413,8 @@ class TestOutputNode:
             "start_time": 1000.0
         }
 
-        with patch('time.time', return_value=1000.5):  # 模拟500ms延迟
-            result = await output_node(state)
+        mocker.patch('time.time', return_value=1000.5)  # 模拟500ms延迟
+        result = await output_node(state)
 
         assert "result" in result
         assert isinstance(result["result"], RecallResult)

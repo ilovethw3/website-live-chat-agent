@@ -6,8 +6,8 @@
 
 from langchain_core.messages import AIMessage, HumanMessage
 
-from src.agent.edges import should_continue, should_retrieve
-from src.agent.state import AgentState
+from src.agent.main.edges import should_continue, should_retrieve
+from src.agent.main.state import AgentState
 
 
 def test_should_retrieve_needs_rag():

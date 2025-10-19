@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from langchain_core.messages import AIMessage, HumanMessage
 
-from src.agent.graph import get_agent_app
+from src.agent.main.graph import get_agent_app
 from src.core.config import settings
 from src.core.security import verify_api_key
 from src.models.openai_schema import (
@@ -243,7 +243,7 @@ async def _non_stream_response(
     requested_model: str,
 ) -> ChatCompletionResponse:
     """非流式响应"""
-    from src.agent.nodes import _get_filter_reason, _is_valid_user_query
+    from src.agent.main.nodes import _get_filter_reason, _is_valid_user_query
 
     # 在非流式路径中也进行消息验证，过滤外部指令模板
     if not _validate_message_source(user_message):
@@ -369,7 +369,7 @@ async def _stream_response(
     requested_model: str,
 ) -> AsyncGenerator[str, None]:
     """流式响应（SSE）"""
-    from src.agent.nodes import _is_valid_user_query
+    from src.agent.main.nodes import _is_valid_user_query
 
     app = get_agent_app()
 
@@ -398,7 +398,7 @@ async def _stream_response(
 
     # 在API层进行消息验证，过滤外部指令模板
     if not _is_valid_user_query(user_message):
-        from src.agent.nodes import _get_filter_reason
+        from src.agent.main.nodes import _get_filter_reason
         filter_reason = _get_filter_reason(user_message)
         logger.warning(f"⚠️ API层过滤无效消息 (reason: {filter_reason}, length: {len(user_message)})")
         # 返回错误响应，不进入Agent流程

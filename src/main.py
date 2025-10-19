@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 预编译 LangGraph App
     try:
-        from src.agent.graph import get_agent_app
+        from src.agent.main.graph import get_agent_app
         get_agent_app()
         logger.info("✅ LangGraph Agent compiled successfully")
     except Exception as e:

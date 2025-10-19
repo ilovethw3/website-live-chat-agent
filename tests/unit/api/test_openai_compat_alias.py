@@ -248,7 +248,7 @@ class TestModelAlias:
                 {"llm": {"messages": [AIMessage(content="流式测试回复")]}}
             ]
 
-            with patch('src.agent.graph.get_agent_app', return_value=mock_agent):
+            with patch('src.agent.main.graph.get_agent_app', return_value=mock_agent):
                 response = client.post(
                     "/v1/chat/completions",
                     headers={
@@ -273,7 +273,7 @@ class TestModelAlias:
             mock_agent = AsyncMock()
             mock_agent.ainvoke.side_effect = Exception("测试错误")
 
-            with patch('src.agent.graph.get_agent_app', return_value=mock_agent):
+            with patch('src.agent.main.graph.get_agent_app', return_value=mock_agent):
                 response = client.post(
                     "/v1/chat/completions",
                     headers={

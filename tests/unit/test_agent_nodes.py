@@ -4,17 +4,15 @@
 测试 LangGraph 节点函数的行为。
 """
 
-from unittest.mock import patch
-
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from src.agent.nodes import _is_valid_user_query, call_llm_node, retrieve_node, router_node
-from src.agent.state import AgentState
+from src.agent.main.nodes import _is_valid_user_query, call_llm_node, retrieve_node, router_node
+from src.agent.main.state import AgentState
 
 
 @pytest.mark.asyncio
-async def test_call_llm_simple(mock_llm):
+async def test_call_llm_simple(mocker, mock_llm):
     """测试 LLM 调用节点"""
     state: AgentState = {
         "messages": [HumanMessage(content="你好")],
@@ -23,18 +21,18 @@ async def test_call_llm_simple(mock_llm):
         "session_id": "test-123",
     }
 
-    with patch("src.agent.nodes.create_llm", return_value=mock_llm):
-        result = await call_llm_node(state)
+    mocker.patch("src.agent.main.nodes.create_llm", return_value=mock_llm)
+    result = await call_llm_node(state)
 
-        assert "messages" in result
-        assert len(result["messages"]) > 0
-        # 最后一条消息应该是 AI 的回复
-        last_message = result["messages"][-1]
-        assert isinstance(last_message, AIMessage)
+    assert "messages" in result
+    assert len(result["messages"]) > 0
+    # 最后一条消息应该是 AI 的回复
+    last_message = result["messages"][-1]
+    assert isinstance(last_message, AIMessage)
 
 
 @pytest.mark.asyncio
-async def test_call_llm_with_context(mock_llm):
+async def test_call_llm_with_context(mocker, mock_llm):
     """测试带上下文的 LLM 调用"""
     state: AgentState = {
         "messages": [
@@ -51,15 +49,15 @@ async def test_call_llm_with_context(mock_llm):
         "session_id": "test-123",
     }
 
-    with patch("src.agent.nodes.create_llm", return_value=mock_llm):
-        result = await call_llm_node(state)
+    mocker.patch("src.agent.main.nodes.create_llm", return_value=mock_llm)
+    result = await call_llm_node(state)
 
-        assert "messages" in result
-        # LLM 应该收到包含检索文档的上下文
+    assert "messages" in result
+    # LLM 应该收到包含检索文档的上下文
 
 
 @pytest.mark.asyncio
-async def test_retrieve_knowledge(mock_embeddings):
+async def test_retrieve_knowledge(mocker, mock_embeddings):
     """测试知识库检索节点"""
     state: AgentState = {
         "messages": [HumanMessage(content="退货政策是什么？")],
@@ -88,16 +86,18 @@ async def test_retrieve_knowledge(mock_embeddings):
         experiment_id=None
     )
 
-    with patch("src.agent.recall.graph.invoke_recall_agent", return_value=mock_recall_result):
-        result = await retrieve_node(state)
+    mock_invoke_recall = mocker.patch("src.agent.recall.graph.invoke_recall_agent")
+    mock_invoke_recall.return_value = mock_recall_result
 
-        assert "retrieved_docs" in result
-        assert len(result["retrieved_docs"]) > 0
-        assert result["confidence_score"] == 0.9
+    result = await retrieve_node(state)
+
+    assert "retrieved_docs" in result
+    assert len(result["retrieved_docs"]) > 0
+    assert result["confidence_score"] == 0.9
 
 
 @pytest.mark.asyncio
-async def test_retrieve_knowledge_empty_query():
+async def test_retrieve_knowledge_empty_query(mocker):
     """测试空查询的检索"""
     state: AgentState = {
         "messages": [],  # 没有消息
@@ -113,7 +113,7 @@ async def test_retrieve_knowledge_empty_query():
 
 
 @pytest.mark.asyncio
-async def test_router_node_greeting():
+async def test_router_node_greeting(mocker):
     """测试路由节点 - 简单打招呼"""
     state: AgentState = {
         "messages": [HumanMessage(content="你好")],
@@ -129,7 +129,7 @@ async def test_router_node_greeting():
 
 
 @pytest.mark.asyncio
-async def test_router_node_product_query():
+async def test_router_node_product_query(mocker):
     """测试路由节点 - 产品查询（需要检索）"""
     state: AgentState = {
         "messages": [HumanMessage(content="你们的产品有哪些功能？")],
@@ -212,9 +212,8 @@ def test_is_valid_user_query_starts_with_instructions():
         assert not _is_valid_user_query(query), f"Instruction start query should be filtered: {query}"
 
 
-@patch("src.agent.recall.graph.invoke_recall_agent")
 @pytest.mark.asyncio
-async def test_retrieve_node_filters_instruction_templates(mock_recall_agent):
+async def test_retrieve_node_filters_instruction_templates(mocker):
     """测试retrieve_node处理指令模板（现在在API层过滤，这里测试正常检索）"""
     # Mock recall agent result
     from src.agent.recall.schema import RecallHit, RecallResult
@@ -236,6 +235,7 @@ async def test_retrieve_node_filters_instruction_templates(mock_recall_agent):
         experiment_id=None
     )
 
+    mock_recall_agent = mocker.patch("src.agent.recall.graph.invoke_recall_agent")
     mock_recall_agent.return_value = mock_recall_result
 
     # 模拟指令模板消息（现在会通过API层过滤，但这里测试retrieve_node的正常行为）
@@ -256,9 +256,8 @@ async def test_retrieve_node_filters_instruction_templates(mock_recall_agent):
     mock_recall_agent.assert_called_once()
 
 
-@patch("src.agent.recall.graph.invoke_recall_agent")
 @pytest.mark.asyncio
-async def test_retrieve_node_allows_valid_queries(mock_recall_agent):
+async def test_retrieve_node_allows_valid_queries(mocker):
     """测试retrieve_node允许有效查询"""
     # Mock recall agent result
     from src.agent.recall.schema import RecallHit, RecallResult
@@ -280,6 +279,7 @@ async def test_retrieve_node_allows_valid_queries(mock_recall_agent):
         experiment_id=None
     )
 
+    mock_recall_agent = mocker.patch("src.agent.recall.graph.invoke_recall_agent")
     mock_recall_agent.return_value = mock_recall_result
 
     # 模拟有效用户查询
@@ -300,9 +300,8 @@ async def test_retrieve_node_allows_valid_queries(mock_recall_agent):
     assert result["confidence_score"] == 0.9
 
 
-@patch("src.agent.recall.graph.invoke_recall_agent")
 @pytest.mark.asyncio
-async def test_retrieve_node_mixed_scenario(mock_recall_agent):
+async def test_retrieve_node_mixed_scenario(mocker):
     """测试混合场景：指令模板+真实问题（现在在API层过滤，这里测试正常检索）"""
     # Mock recall agent result
     from src.agent.recall.schema import RecallHit, RecallResult
@@ -324,6 +323,7 @@ async def test_retrieve_node_mixed_scenario(mock_recall_agent):
         experiment_id=None
     )
 
+    mock_recall_agent = mocker.patch("src.agent.recall.graph.invoke_recall_agent")
     mock_recall_agent.return_value = mock_recall_result
 
     # 模拟包含指令模板和真实问题的混合消息（现在会通过API层过滤）

@@ -9,9 +9,9 @@ import logging
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
-from src.agent.edges import should_continue, should_retrieve
-from src.agent.nodes import call_llm_node, retrieve_node, router_node
-from src.agent.state import AgentState
+from src.agent.main.edges import should_continue, should_retrieve
+from src.agent.main.nodes import call_llm_node, retrieve_node, router_node
+from src.agent.main.state import AgentState
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)

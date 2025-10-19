@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.agent.tools import search_knowledge_for_agent
+from src.agent.main.tools import search_knowledge_for_agent
 from src.api.v1.knowledge import search_knowledge
 
 
@@ -28,9 +28,9 @@ class TestIssue31CompleteFix:
             {"text": "测试文档", "score": 0.9, "metadata": {}}
         ]
 
-        with patch('src.agent.tools.create_embeddings', return_value=mock_embeddings), \
-             patch('src.agent.tools.milvus_service', mock_milvus_service), \
-             patch('src.agent.tools.logger') as mock_logger:
+        with patch('src.agent.main.tools.create_embeddings', return_value=mock_embeddings), \
+             patch('src.agent.main.tools.milvus_service', mock_milvus_service), \
+             patch('src.agent.main.tools.logger') as mock_logger:
 
             # 调用函数
             result = await search_knowledge_for_agent(long_query, top_k=3)
@@ -101,9 +101,9 @@ class TestIssue31CompleteFix:
             {"text": "测试文档", "score": 0.9, "metadata": {}}
         ]
 
-        with patch('src.agent.tools.create_embeddings', return_value=mock_embeddings), \
-             patch('src.agent.tools.milvus_service', mock_milvus_service), \
-             patch('src.agent.tools.logger') as mock_logger:
+        with patch('src.agent.main.tools.create_embeddings', return_value=mock_embeddings), \
+             patch('src.agent.main.tools.milvus_service', mock_milvus_service), \
+             patch('src.agent.main.tools.logger') as mock_logger:
 
             # 调用函数
             result = await search_knowledge_for_agent(short_query, top_k=3)

@@ -2,11 +2,9 @@
 主Agent集成测试
 """
 
-from unittest.mock import patch
-
 import pytest
 
-from src.agent.nodes import retrieve_node
+from src.agent.main.nodes import retrieve_node
 from src.agent.recall.schema import RecallHit, RecallResult
 
 
@@ -27,11 +25,10 @@ class TestMainAgentIntegration:
         }
 
     @pytest.mark.asyncio
-    @patch('src.agent.nodes.settings')
-    @patch('src.agent.nodes.invoke_recall_agent')
-    async def test_retrieve_node_integration_success(self, mock_invoke_recall, mock_settings, mock_state):
+    async def test_retrieve_node_integration_success(self, mocker, mock_state):
         """测试retrieve_node成功集成"""
         # Mock配置
+        mock_settings = mocker.patch('src.agent.main.nodes.settings')
         mock_settings.vector_top_k = 5
 
         # Mock召回Agent返回结果
@@ -60,6 +57,7 @@ class TestMainAgentIntegration:
             experiment_id="exp-123"
         )
 
+        mock_invoke_recall = mocker.patch('src.agent.recall.graph.invoke_recall_agent')
         mock_invoke_recall.return_value = mock_recall_result
 
         # 调用retrieve_node
@@ -97,11 +95,10 @@ class TestMainAgentIntegration:
         assert tool_calls[0]["degraded"] is False
 
     @pytest.mark.asyncio
-    @patch('src.agent.nodes.settings')
-    @patch('src.agent.nodes.invoke_recall_agent')
-    async def test_retrieve_node_integration_empty_results(self, mock_invoke_recall, mock_settings, mock_state):
+    async def test_retrieve_node_integration_empty_results(self, mocker, mock_state):
         """测试retrieve_node空结果"""
         # Mock配置
+        mock_settings = mocker.patch('src.agent.main.nodes.settings')
         mock_settings.vector_top_k = 5
 
         # Mock召回Agent返回空结果
@@ -112,6 +109,7 @@ class TestMainAgentIntegration:
             trace_id="trace-456"
         )
 
+        mock_invoke_recall = mocker.patch('src.agent.recall.graph.invoke_recall_agent')
         mock_invoke_recall.return_value = mock_recall_result
 
         # 调用retrieve_node
@@ -123,11 +121,10 @@ class TestMainAgentIntegration:
         assert result["recall_metrics"]["degraded"] is True
 
     @pytest.mark.asyncio
-    @patch('src.agent.nodes.settings')
-    @patch('src.agent.nodes.invoke_recall_agent')
-    async def test_retrieve_node_integration_fallback(self, mock_invoke_recall, mock_settings, mock_state):
+    async def test_retrieve_node_integration_fallback(self, mocker, mock_state):
         """测试retrieve_node降级场景"""
         # Mock配置
+        mock_settings = mocker.patch('src.agent.main.nodes.settings')
         mock_settings.vector_top_k = 5
 
         # Mock召回Agent返回降级结果
@@ -147,6 +144,7 @@ class TestMainAgentIntegration:
             trace_id="trace-456"
         )
 
+        mock_invoke_recall = mocker.patch('src.agent.recall.graph.invoke_recall_agent')
         mock_invoke_recall.return_value = mock_recall_result
 
         # 调用retrieve_node
@@ -160,14 +158,14 @@ class TestMainAgentIntegration:
         assert result["recall_metrics"]["degraded"] is True
 
     @pytest.mark.asyncio
-    @patch('src.agent.nodes.settings')
-    @patch('src.agent.nodes.invoke_recall_agent')
-    async def test_retrieve_node_integration_error_handling(self, mock_invoke_recall, mock_settings, mock_state):
+    async def test_retrieve_node_integration_error_handling(self, mocker, mock_state):
         """测试retrieve_node错误处理"""
         # Mock配置
+        mock_settings = mocker.patch('src.agent.main.nodes.settings')
         mock_settings.vector_top_k = 5
 
         # Mock召回Agent抛出异常
+        mock_invoke_recall = mocker.patch('src.agent.recall.graph.invoke_recall_agent')
         mock_invoke_recall.side_effect = Exception("召回Agent错误")
 
         # 调用retrieve_node（应该处理异常）
@@ -178,11 +176,10 @@ class TestMainAgentIntegration:
         assert result["confidence_score"] == 0.0
 
     @pytest.mark.asyncio
-    @patch('src.agent.nodes.settings')
-    @patch('src.agent.nodes.invoke_recall_agent')
-    async def test_retrieve_node_integration_multi_source(self, mock_invoke_recall, mock_settings, mock_state):
+    async def test_retrieve_node_integration_multi_source(self, mocker, mock_state):
         """测试多源召回集成"""
         # Mock配置
+        mock_settings = mocker.patch('src.agent.main.nodes.settings')
         mock_settings.vector_top_k = 5
 
         # Mock召回Agent返回多源结果
@@ -218,6 +215,7 @@ class TestMainAgentIntegration:
             trace_id="trace-456"
         )
 
+        mock_invoke_recall = mocker.patch('src.agent.recall.graph.invoke_recall_agent')
         mock_invoke_recall.return_value = mock_recall_result
 
         # 调用retrieve_node
@@ -233,11 +231,10 @@ class TestMainAgentIntegration:
         assert result["recall_metrics"]["sources"] == ["vector", "faq", "keyword"]
 
     @pytest.mark.asyncio
-    @patch('src.agent.nodes.settings')
-    @patch('src.agent.nodes.invoke_recall_agent')
-    async def test_retrieve_node_integration_experiment(self, mock_invoke_recall, mock_settings, mock_state):
+    async def test_retrieve_node_integration_experiment(self, mocker, mock_state):
         """测试实验集成"""
         # Mock配置
+        mock_settings = mocker.patch('src.agent.main.nodes.settings')
         mock_settings.vector_top_k = 5
 
         # 设置实验ID
@@ -261,6 +258,7 @@ class TestMainAgentIntegration:
             experiment_id="exp-recall-v2"
         )
 
+        mock_invoke_recall = mocker.patch('src.agent.recall.graph.invoke_recall_agent')
         mock_invoke_recall.return_value = mock_recall_result
 
         # 调用retrieve_node
